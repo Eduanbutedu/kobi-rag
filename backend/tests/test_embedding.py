@@ -12,7 +12,7 @@ def test_vectors_have_expected_dimension():
 
 def test_similar_texts_are_closer_than_unrelated():
     def dot(a: list[float], b: list[float]) -> float:
-        return sum(x * y for x, y in zip(a, b))
+        return sum(x * y for x, y in zip(a, b, strict=True))
 
     v_izin, v_tatil, v_futbol = embed_texts(
         ["Yıllık izin başvurusu nasıl yapılır?",

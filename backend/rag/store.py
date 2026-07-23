@@ -42,7 +42,7 @@ class DocumentStore:
         """Store all chunks of a document with their embeddings. Returns chunk count."""
         if len(chunks) != len(vectors):
             raise ValueError("chunks and vectors must have the same length")
-        for text, vector in zip(chunks, vectors):
+        for text, vector in zip(chunks, vectors, strict=True):
             cur = self.db.execute(
                 "INSERT INTO chunks (source, text) VALUES (?, ?)", (source, text)
             )
