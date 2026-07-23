@@ -1,0 +1,23 @@
+[project]
+name = "kobi-rag"
+version = "0.1.0"
+description = "Local RAG-powered document Q&A assistant for SMEs"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlite-vec",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
