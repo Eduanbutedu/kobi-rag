@@ -13,7 +13,7 @@ class DocumentStore:
     """Stores document chunks and their embeddings; supports semantic search."""
 
     def __init__(self, db_path: str | Path = "kobi_rag.db") -> None:
-        self.db = sqlite3.connect(db_path)
+        self.db = sqlite3.connect(db_path, check_same_thread=False)
         self.db.enable_load_extension(True)
         sqlite_vec.load(self.db)
         self.db.enable_load_extension(False)

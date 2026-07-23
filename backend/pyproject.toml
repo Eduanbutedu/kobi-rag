@@ -9,6 +9,7 @@ dependencies = [
     "sqlite-vec",
     "pymupdf",
     "sentence-transformers",
+    "python-multipart",
 ]
 
 [dependency-groups]
