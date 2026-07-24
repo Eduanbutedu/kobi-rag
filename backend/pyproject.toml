@@ -10,6 +10,7 @@ dependencies = [
     "pymupdf",
     "sentence-transformers",
     "python-multipart",
+    "foundry-local-sdk-winml",
 ]
 
 [dependency-groups]

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app.deps import get_store
 from rag.extraction import SUPPORTED_EXTENSIONS
+from rag.llm import generate_answer
 from rag.service import ingest_file, retrieve
 
 app = FastAPI(
@@ -18,6 +19,11 @@ app = FastAPI(
 
 class SearchRequest(BaseModel):
     query: str
+    k: int = 3
+
+
+class AskRequest(BaseModel):
+    question: str
     k: int = 3
 
 
@@ -36,10 +42,12 @@ async def upload_document(file: UploadFile) -> dict:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = Path(tmp.name)
 
+    renamed_path = tmp_path.with_name(file.filename)
     try:
-        chunk_count = ingest_file(get_store(), tmp_path.rename(tmp_path.with_name(file.filename)))
+        tmp_path.rename(renamed_path)
+        chunk_count = ingest_file(get_store(), renamed_path)
     finally:
-        tmp_path.with_name(file.filename).unlink(missing_ok=True)
+        renamed_path.unlink(missing_ok=True)
 
     return {"filename": file.filename, "chunks": chunk_count}
 
@@ -48,3 +56,16 @@ async def upload_document(file: UploadFile) -> dict:
 def search(request: SearchRequest) -> dict:
     results = retrieve(get_store(), request.query, k=request.k)
     return {"query": request.query, "results": results}
+
+
+@app.post("/ask")
+def ask(request: AskRequest) -> dict:
+    chunks = retrieve(get_store(), request.question, k=request.k)
+    if not chunks:
+        return {
+            "question": request.question,
+            "answer": "Henüz yüklenmiş doküman yok.",
+            "sources": [],
+        }
+    answer = generate_answer(request.question, chunks)
+    return {"question": request.question, "answer": answer, "sources": chunks}
