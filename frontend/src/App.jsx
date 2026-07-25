@@ -7,6 +7,11 @@ export default function App() {
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [messages, setMessages] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const chatEndRef = useRef(null);
+
   async function refreshDocuments() {
     try {
       const data = await api.listDocuments();
@@ -19,6 +24,10 @@ export default function App() {
   useEffect(() => {
     refreshDocuments();
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, asking]);
 
   async function handleFileSelected(event) {
     const file = event.target.files?.[0];
@@ -43,6 +52,28 @@ export default function App() {
       await refreshDocuments();
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function handleAsk() {
+    const q = question.trim();
+    if (!q || asking) return;
+    setQuestion("");
+    setMessages((prev) => [...prev, { role: "user", content: q }]);
+    setAsking(true);
+    try {
+      const data = await api.ask(q);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.answer, sources: data.sources },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: err.message, isError: true },
+      ]);
+    } finally {
+      setAsking(false);
     }
   }
 
@@ -103,19 +134,86 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Sağ panel — sohbet (sıradaki adım) */}
+      {/* Sağ panel — sohbet */}
       <main className="flex flex-1 flex-col">
-        <div className="flex-1 overflow-y-auto p-6 text-sm text-zinc-500">
-          Bir doküman yükleyin ve soru sorun.
+        <div className="flex-1 overflow-y-auto p-6">
+          {messages.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              Bir doküman yükleyin ve soru sorun.
+            </p>
+          ) : (
+            <div className="mx-auto flex max-w-3xl flex-col gap-4">
+              {messages.map((msg, i) =>
+                msg.role === "user" ? (
+                  <div key={i} className="self-end max-w-[80%]">
+                    <div className="rounded-2xl rounded-br-sm bg-emerald-700 px-4 py-2.5 text-sm">
+                      {msg.content}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} className="self-start w-full max-w-[90%]">
+                    <div
+                      className={`rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                        msg.isError
+                          ? "bg-red-950/60 border border-red-900 text-red-300"
+                          : "bg-zinc-800/80"
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                    {msg.sources?.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <p className="text-xs font-medium text-zinc-500">
+                          Kaynaklar
+                        </p>
+                        {msg.sources.map((src, j) => (
+                          <div
+                            key={j}
+                            className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-xs font-medium text-emerald-500">
+                                {src.source}
+                              </p>
+                              <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                                %{Math.round(src.score * 100)} benzerlik
+                              </span>
+                            </div>
+                            <p className="mt-1 line-clamp-3 text-xs text-zinc-500">
+                              {src.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+              {asking && (
+                <div className="self-start rounded-2xl rounded-bl-sm bg-zinc-800/80 px-4 py-2.5 text-sm text-zinc-400">
+                  Düşünüyor...
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+          )}
         </div>
         <div className="border-t border-zinc-800 p-4">
-          <div className="flex gap-2">
+          <div className="mx-auto flex max-w-3xl gap-2">
             <input
-              className="flex-1 rounded-lg bg-zinc-900 border border-zinc-800 px-4 py-2.5 text-sm outline-none focus:border-emerald-600"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+              disabled={asking}
+              className="flex-1 rounded-lg bg-zinc-900 border border-zinc-800 px-4 py-2.5 text-sm outline-none focus:border-emerald-600 disabled:opacity-50"
               placeholder="Dokümanlarınıza bir soru sorun..."
             />
-            <button className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium hover:bg-emerald-500">
-              Sor
+            <button
+              onClick={handleAsk}
+              disabled={asking || !question.trim()}
+              className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600"
+            >
+              {asking ? "..." : "Sor"}
             </button>
           </div>
         </div>
