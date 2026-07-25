@@ -231,13 +231,13 @@ export default function App() {
             <div className="mx-auto flex max-w-3xl flex-col gap-4">
               {messages.map((msg, i) =>
                 msg.role === "user" ? (
-                  <div key={i} className="self-end max-w-[80%]">
+                  <div key={i} className="msg-enter self-end max-w-[80%]">
                     <div className="rounded-2xl rounded-br-sm bg-brass-500 px-4 py-2.5 text-sm font-medium text-ink-950">
                       {msg.content}
                     </div>
                   </div>
                 ) : (
-                  <div key={i} className="self-start w-full max-w-[90%]">
+                  <div key={i} className="msg-enter self-start w-full max-w-[90%]">
                     <div
                       className={`rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm whitespace-pre-wrap ${
                         msg.isError
@@ -246,6 +246,9 @@ export default function App() {
                       }`}
                     >
                       {msg.content || (msg.streaming ? "Düşünüyor..." : "")}
+                      {msg.streaming && msg.content && (
+                        <span className="caret" aria-hidden="true" />
+                      )}
                     </div>
                     {msg.sources?.length > 0 && (
                       <div className="mt-2 flex flex-col gap-2">
