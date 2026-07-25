@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink-950: #0b1220;
+  --color-ink-900: #121d31;
+  --color-ink-800: #1b2a45;
+  --color-ink-700: #2a3d5e;
+  --color-paper: #efe7d5;
+  --color-mist: #a5aebf;
+  --color-faint: #707b93;
+  --color-brass-600: #b08a3e;
+  --color-brass-500: #c9a050;
+  --color-brass-400: #ddb86a;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+}
