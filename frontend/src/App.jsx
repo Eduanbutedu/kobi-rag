@@ -1,4 +1,51 @@
+import { useEffect, useRef, useState } from "react";
+import { api } from "./api";
+
 export default function App() {
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  async function refreshDocuments() {
+    try {
+      const data = await api.listDocuments();
+      setDocuments(data.documents);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  useEffect(() => {
+    refreshDocuments();
+  }, []);
+
+  async function handleFileSelected(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      await api.uploadDocument(file);
+      await refreshDocuments();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleDelete(source) {
+    setError(null);
+    try {
+      await api.deleteDocument(source);
+      await refreshDocuments();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100">
       {/* Sol panel — doküman yönetimi */}
@@ -7,15 +54,56 @@ export default function App() {
           <h1 className="text-lg font-semibold tracking-tight">KOBİ RAG</h1>
           <p className="text-xs text-zinc-400">Yerel doküman asistanı</p>
         </div>
-        <div className="rounded-lg border border-dashed border-zinc-700 p-6 text-center text-sm text-zinc-400">
-          PDF / TXT yükle
-        </div>
-        <div className="flex-1 overflow-y-auto text-sm text-zinc-500">
-          Henüz doküman yok
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.txt"
+          className="hidden"
+          onChange={handleFileSelected}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="rounded-lg border border-dashed border-zinc-700 p-6 text-sm text-zinc-400 hover:border-emerald-600 hover:text-emerald-500 disabled:opacity-50"
+        >
+          {uploading ? "İşleniyor... (parçalanıyor ve vektörleniyor)" : "PDF / TXT yükle"}
+        </button>
+
+        {error && (
+          <div className="rounded-lg bg-red-950/60 border border-red-900 px-3 py-2 text-xs text-red-300">
+            {error}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto">
+          {documents.length === 0 ? (
+            <p className="text-sm text-zinc-500">Henüz doküman yok</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {documents.map((doc) => (
+                <li
+                  key={doc.source}
+                  className="group flex items-center justify-between rounded-lg bg-zinc-800/60 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">{doc.source}</p>
+                    <p className="text-xs text-zinc-500">{doc.chunks} parça</p>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(doc.source)}
+                    className="ml-2 rounded px-2 py-1 text-xs text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-950 hover:text-red-300"
+                  >
+                    Sil
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </aside>
 
-      {/* Sağ panel — sohbet */}
+      {/* Sağ panel — sohbet (sıradaki adım) */}
       <main className="flex flex-1 flex-col">
         <div className="flex-1 overflow-y-auto p-6 text-sm text-zinc-500">
           Bir doküman yükleyin ve soru sorun.
