@@ -41,3 +41,17 @@ def test_search_returns_most_similar_first(store):
 def test_search_respects_k(store):
     store.add_document("a.pdf", ["x", "y", "z"], [_vec(1, 0), _vec(0, 1), _vec(1, 1)])
     assert len(store.search(_vec(1, 0), k=2)) == 2
+
+def test_list_documents_groups_by_source(store):
+    store.add_document("a.pdf", ["x", "y"], [_vec(1, 0), _vec(0, 1)])
+    store.add_document("b.pdf", ["z"], [_vec(1, 1)])
+    docs = store.list_documents()
+    assert {"source": "a.pdf", "chunks": 2} in docs
+    assert {"source": "b.pdf", "chunks": 1} in docs
+
+
+def test_delete_document_removes_chunks(store):
+    store.add_document("a.pdf", ["x"], [_vec(1, 0)])
+    assert store.delete_document("a.pdf") == 1
+    assert store.list_documents() == []
+    assert store.search(_vec(1, 0), k=1) == []

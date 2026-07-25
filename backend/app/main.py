@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.deps import get_store
@@ -14,6 +15,12 @@ app = FastAPI(
     title="KOBİ RAG API",
     description="Local RAG-powered document Q&A assistant",
     version="0.1.0",
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -69,3 +76,15 @@ def ask(request: AskRequest) -> dict:
         }
     answer = generate_answer(request.question, chunks)
     return {"question": request.question, "answer": answer, "sources": chunks}
+
+@app.get("/documents")
+def list_documents() -> dict:
+    return {"documents": get_store().list_documents()}
+
+
+@app.delete("/documents/{source}")
+def delete_document(source: str) -> dict:
+    deleted = get_store().delete_document(source)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail=f"Document not found: {source}")
+    return {"source": source, "deleted_chunks": deleted}

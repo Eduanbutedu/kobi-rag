@@ -70,5 +70,26 @@ class DocumentStore:
             for text, source, distance in rows
         ]
 
+    def list_documents(self) -> list[dict]:
+        """Return uploaded documents with their chunk counts."""
+        rows = self.db.execute(
+            "SELECT source, COUNT(*) FROM chunks GROUP BY source ORDER BY source"
+        ).fetchall()
+        return [{"source": source, "chunks": count} for source, count in rows]
+
+    def delete_document(self, source: str) -> int:
+        """Delete all chunks of a document. Returns deleted chunk count."""
+        ids = [
+            row[0]
+            for row in self.db.execute(
+                "SELECT id FROM chunks WHERE source = ?", (source,)
+            ).fetchall()
+        ]
+        for chunk_id in ids:
+            self.db.execute("DELETE FROM vec_chunks WHERE rowid = ?", (chunk_id,))
+        self.db.execute("DELETE FROM chunks WHERE source = ?", (source,))
+        self.db.commit()
+        return len(ids)
+
     def close(self) -> None:
         self.db.close()
