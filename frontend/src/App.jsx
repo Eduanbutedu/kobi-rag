@@ -125,6 +125,11 @@ export default function App() {
     }
   }
 
+  function handleClearChat() {
+    if (asking) return;
+    setMessages([]);
+  }
+
   return (
     <div className="flex h-screen bg-ink-950 text-paper">
       {/* Sol panel — doküman yönetimi */}
@@ -201,6 +206,17 @@ export default function App() {
 
       {/* Sağ panel — sohbet */}
       <main className="flex flex-1 flex-col">
+        {messages.length > 0 && (
+          <div className="flex justify-end border-b border-ink-800 px-4 py-2">
+            <button
+              onClick={handleClearChat}
+              disabled={asking}
+              className="rounded px-2.5 py-1 text-xs text-faint transition hover:bg-ink-800 hover:text-mist disabled:opacity-50"
+            >
+              Yeni sohbet
+            </button>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto p-6">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5">

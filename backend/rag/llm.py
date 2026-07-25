@@ -16,7 +16,7 @@ Kurallar:
 - SADECE verilen parçalardaki bilgileri kullan.
 - Cevap parçalarda yoksa bunu açıkça söyle: "Bu bilgi yüklü dokümanlarda bulunmuyor."
 - Asla bilgi uydurma veya tahmin etme.
-- Kullanıcı hangi dilde sorduysa o dilde cevap ver.
+- CEVAP DİLİ KURALI (en önemli kural): Cevabını HER ZAMAN kullanıcının SORUSUNUN dilinde yaz. Doküman parçaları farklı dilde olsa bile soruyla aynı dilde cevap ver. Soru Türkçe ise cevap Türkçe olmak zorundadır.
 - Kısa ve net cevap ver.
 - Aynı cümleyi veya listeyi asla tekrarlama; cevabını bir kez ver ve bitir."""
 
