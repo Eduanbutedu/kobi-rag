@@ -31,3 +31,26 @@ def test_invalid_params_raise():
         chunk_text("abc", chunk_size=0)
     with pytest.raises(ValueError):
         chunk_text("abc", chunk_size=100, overlap=100)
+
+
+def test_sentences_are_not_split_mid_sentence():
+    sentences = [f"Bu {i}. cümledir ve bir miktar dolgu metni içerir." for i in range(20)]
+    text = " ".join(sentences)
+    chunks = chunk_text(text, chunk_size=200, overlap=50)
+    assert len(chunks) > 1
+    for chunk in chunks:
+        assert chunk.endswith("."), f"Chunk cümle ortasında kesildi: ...{chunk[-40:]}"
+        assert all(len(c) <= 200 for c in chunks)
+
+
+def test_chunk_overlap_repeats_trailing_sentence():
+    sentences = [f"Cümle numara {i} burada." for i in range(30)]
+    text = " ".join(sentences)
+    chunks = chunk_text(text, chunk_size=150, overlap=60)
+    # Ardışık chunk'lar arasında en az bir ortak cümle olmalı
+    shared = sum(
+        1
+        for a, b in zip(chunks, chunks[1:], strict=False)
+        if any(s in b for s in a.split(". ") if len(s) > 10)
+    )
+    assert shared > 0
