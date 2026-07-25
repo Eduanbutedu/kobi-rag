@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 
+const SUGGESTED_QUESTIONS = [
+  "Bu doküman ne hakkında?",
+  "En önemli bulgular neler?",
+  "Which model performed best on FD001?",
+];
+
 export default function App() {
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -10,6 +16,7 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const chatEndRef = useRef(null);
 
   async function refreshDocuments() {
@@ -46,6 +53,11 @@ export default function App() {
   }
 
   async function handleDelete(source) {
+    if (confirmDelete !== source) {
+      setConfirmDelete(source);
+      return;
+    }
+    setConfirmDelete(null);
     setError(null);
     try {
       await api.deleteDocument(source);
@@ -55,8 +67,8 @@ export default function App() {
     }
   }
 
-  async function handleAsk() {
-    const q = question.trim();
+  async function handleAsk(preset) {
+    const q = (preset ?? question).trim();
     if (!q || asking) return;
     setQuestion("");
     setMessages((prev) => [
@@ -138,9 +150,16 @@ export default function App() {
                   </div>
                   <button
                     onClick={() => handleDelete(doc.source)}
-                    className="ml-2 rounded px-2 py-1 text-xs text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-950 hover:text-red-300"
+                    onMouseLeave={() =>
+                      setConfirmDelete((c) => (c === doc.source ? null : c))
+                    }
+                    className={`ml-2 shrink-0 rounded px-2 py-1 text-xs transition ${
+                      confirmDelete === doc.source
+                        ? "bg-red-950 text-red-300 opacity-100"
+                        : "text-zinc-500 opacity-0 group-hover:opacity-100 hover:bg-red-950 hover:text-red-300"
+                    }`}
                   >
-                    Sil
+                    {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
                   </button>
                 </li>
               ))}
@@ -153,9 +172,24 @@ export default function App() {
       <main className="flex flex-1 flex-col">
         <div className="flex-1 overflow-y-auto p-6">
           {messages.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              Bir doküman yükleyin ve soru sorun.
-            </p>
+            <div className="flex h-full flex-col items-center justify-center gap-4">
+              <p className="text-sm text-zinc-500">
+                Bir doküman yükleyin ve soru sorun.
+              </p>
+              {documents.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {SUGGESTED_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => handleAsk(q)}
+                      className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-xs text-zinc-400 transition hover:border-emerald-600 hover:text-emerald-500"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="mx-auto flex max-w-3xl flex-col gap-4">
               {messages.map((msg, i) =>
@@ -219,7 +253,7 @@ export default function App() {
               placeholder="Dokümanlarınıza bir soru sorun..."
             />
             <button
-              onClick={handleAsk}
+              onClick={() => handleAsk()}
               disabled={asking || !question.trim()}
               className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600"
             >
