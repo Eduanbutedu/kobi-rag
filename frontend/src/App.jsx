@@ -59,19 +59,34 @@ export default function App() {
     const q = question.trim();
     if (!q || asking) return;
     setQuestion("");
-    setMessages((prev) => [...prev, { role: "user", content: q }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: q },
+      { role: "assistant", content: "", sources: [], streaming: true },
+    ]);
     setAsking(true);
+
+    const updateLast = (updater) =>
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = updater(next[next.length - 1]);
+        return next;
+      });
+
     try {
-      const data = await api.ask(q);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.answer, sources: data.sources },
-      ]);
+      await api.askStream(q, {
+        onSources: (sources) => updateLast((m) => ({ ...m, sources })),
+        onDelta: (piece) =>
+          updateLast((m) => ({ ...m, content: m.content + piece })),
+      });
+      updateLast((m) => ({ ...m, streaming: false }));
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: err.message, isError: true },
-      ]);
+      updateLast((m) => ({
+        ...m,
+        content: err.message,
+        isError: true,
+        streaming: false,
+      }));
     } finally {
       setAsking(false);
     }
@@ -159,7 +174,7 @@ export default function App() {
                           : "bg-zinc-800/80"
                       }`}
                     >
-                      {msg.content}
+                      {msg.content || (msg.streaming ? "Düşünüyor..." : "")}
                     </div>
                     {msg.sources?.length > 0 && (
                       <div className="mt-2 flex flex-col gap-2">
@@ -188,11 +203,6 @@ export default function App() {
                     )}
                   </div>
                 )
-              )}
-              {asking && (
-                <div className="self-start rounded-2xl rounded-bl-sm bg-zinc-800/80 px-4 py-2.5 text-sm text-zinc-400">
-                  Düşünüyor...
-                </div>
               )}
               <div ref={chatEndRef} />
             </div>

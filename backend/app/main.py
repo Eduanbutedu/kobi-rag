@@ -1,14 +1,16 @@
+import json
 import shutil
 import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.deps import get_store
 from rag.extraction import SUPPORTED_EXTENSIONS
-from rag.llm import generate_answer
+from rag.llm import generate_answer, stream_answer
 from rag.service import ingest_file, retrieve
 
 app = FastAPI(
@@ -76,6 +78,24 @@ def ask(request: AskRequest) -> dict:
         }
     answer = generate_answer(request.question, chunks)
     return {"question": request.question, "answer": answer, "sources": chunks}
+
+
+@app.post("/ask/stream")
+def ask_stream(request: AskRequest) -> StreamingResponse:
+    chunks = retrieve(get_store(), request.question, k=request.k)
+
+    def event_stream():
+        yield f"event: sources\ndata: {json.dumps(chunks, ensure_ascii=False)}\n\n"
+        if not chunks:
+            payload = json.dumps("Henüz yüklenmiş doküman yok.", ensure_ascii=False)
+            yield f"event: delta\ndata: {payload}\n\n"
+        else:
+            for piece in stream_answer(request.question, chunks):
+                yield f"event: delta\ndata: {json.dumps(piece, ensure_ascii=False)}\n\n"
+        yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
 
 @app.get("/documents")
 def list_documents() -> dict:
