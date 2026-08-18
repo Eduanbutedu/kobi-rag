@@ -11,11 +11,13 @@ import argparse
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pymupdf
 import requests
 
 from eval.sources import Source, SourcesError, describe_payload, load_sources, looks_like_pdf
+from eval.tls_chain import ChainRepair
 
 DEFAULT_SOURCES = Path("eval/corpus_sources.txt")
 DEFAULT_TARGET_DIR = Path("data/corpus")
@@ -63,14 +65,31 @@ def page_count(path: Path) -> int | None:
         return None
 
 
-def download(url: str, session: requests.Session) -> bytes:
-    """Fetch a URL with retries and exponential backoff. Raises on final failure."""
+def download(url: str, session: requests.Session, chain_repair: ChainRepair | None = None) -> bytes:
+    """Fetch a URL with retries and exponential backoff. Raises on final failure.
+
+    A certificate error is retried once against a repaired CA bundle, because
+    some of these sites omit their intermediate certificate.
+    """
+    host = urlparse(url).hostname or ""
     last_error: Exception | None = None
+    repaired = False
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            response = session.get(url, headers=BROWSER_HEADERS, timeout=TIMEOUT_SECONDS)
+            verify = chain_repair.verify_for(host) if chain_repair else True
+            response = session.get(
+                url, headers=BROWSER_HEADERS, timeout=TIMEOUT_SECONDS, verify=verify
+            )
             response.raise_for_status()
             return response.content
+        except requests.exceptions.SSLError as exc:
+            last_error = exc
+            # Sunucu ara sertifikayı göndermiyorsa AIA üzerinden tamamlamayı dene
+            if chain_repair and not repaired and chain_repair.repair(host):
+                repaired = True
+                print(f"      completing certificate chain for {host} and retrying")
+                continue
+            break
         except requests.RequestException as exc:
             last_error = exc
             if attempt < MAX_ATTEMPTS:
@@ -81,7 +100,11 @@ def download(url: str, session: requests.Session) -> bytes:
 
 
 def fetch_source(
-    source: Source, target_dir: Path, session: requests.Session, force: bool
+    source: Source,
+    target_dir: Path,
+    session: requests.Session,
+    force: bool,
+    chain_repair: ChainRepair | None = None,
 ) -> FetchResult:
     """Download one source into target_dir, validating that it really is a PDF."""
     target = target_dir / source.filename
@@ -91,7 +114,7 @@ def fetch_source(
         )
 
     try:
-        data = download(source.url, session)
+        data = download(source.url, session, chain_repair)
     except RuntimeError as exc:
         return FetchResult(source, FAILED, detail=str(exc)[:120])
 
@@ -176,10 +199,13 @@ def main() -> None:
     print(f"Fetching {len(sources)} source(s) into {args.target_dir}\n")
 
     results: list[FetchResult] = []
+    chain_repair = ChainRepair()
     with requests.Session() as session:
         for index, source in enumerate(sources, start=1):
             print(f"[{index:>2}/{len(sources)}] {source.slug}")
-            result = fetch_source(source, args.target_dir, session, args.force)
+            result = fetch_source(
+                source, args.target_dir, session, args.force, chain_repair
+            )
             results.append(result)
             print(f"      {result.status}{': ' + result.detail if result.detail else ''}")
             # Siteyi yormamak için istekler arasında bekle

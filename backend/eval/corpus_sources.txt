@@ -23,7 +23,9 @@ https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6098.pdf | borclar-kanunu | mevzuat
 https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6331.pdf | isg-kanunu | mevzuat
 https://www.mevzuat.gov.tr/mevzuatmetin/1.5.5510.pdf | sosyal-sigortalar-kanunu | mevzuat
 https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6502.pdf | tuketicinin-korunmasi | mevzuat
-https://www.mevzuat.gov.tr/mevzuatmetin/1.5.213.pdf | vergi-usul-kanunu | mevzuat
+# 213 sayılı kanun 1961 tarihli, yani 4. tertip: 1.5.213 HTML hata sayfası döndürüyor.
+# 1.3.213 ise 1922 tarihli, aynı numarayı taşıyan bambaşka bir kanun.
+https://www.mevzuat.gov.tr/mevzuatmetin/1.4.213.pdf | vergi-usul-kanunu | mevzuat
 https://mevzuat.gov.tr/MevzuatMetin/yonetmelik/7.5.23722.pdf | planli-alanlar-imar-yonetmeligi | mevzuat
 
 # --- Rehber (telifli; indirilir, commit EDİLMEZ) ---

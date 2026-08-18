@@ -31,7 +31,7 @@ def fake_download(monkeypatch):
     """Replace the network call with a queue of canned responses."""
 
     def _install(payload):
-        def _download(url, session):
+        def _download(url, session, chain_repair=None):
             if isinstance(payload, Exception):
                 raise payload
             return payload
