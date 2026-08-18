@@ -1,0 +1,59 @@
+# Elle yazılmış sorular — kullanıcı dili, mevzuat dili değil.
+# Chunk id'leri sonra atanacak.
+
+# --- İş Kanunu ---
+işten çıkardığım işçi dava açmak isterse ne kadar süresi var
+yeni işe aldığım birine en fazla ne kadar deneme süresi verebilirim
+çalışanın yıllık izin günü kaç yıl çalıştığına göre nasıl değişiyor
+bir yılda en fazla kaç saat fazla mesai yaptırabilirim
+doğum yapan çalışanım ne kadar izin kullanabilir
+kapıcının çalışma şartları normal işçiden farklı mı
+
+# --- İş sağlığı ve güvenliği ---
+kaç çalışanım olursa iş güvenliği uzmanı tutmak zorundayım
+iş kazası olursa nereye ve kaç gün içinde bildirmem lazım
+risk değerlendirmesini kaç yılda bir yenilemem gerekiyor
+az tehlikeli sınıfta yer alan bir işyeri neye göre belirleniyor
+acil durum planı hazırlamak zorunda mıyım
+
+# --- KVKK ---
+müşteri bilgilerimi yurt dışındaki bir sunucuda tutabilir miyim
+VERBİS'e kayıt olmak zorunda mıyım
+veri ihlali yaşarsam kaç saat içinde bildirmem gerekiyor
+açık rıza almadan müşterilerimi e-posta listeme ekleyebilir miyim
+çalışanların özlük dosyalarını ne kadar süre saklamalıyım
+müşteri şifrelerini veritabanında nasıl saklamam gerekiyor
+kişisel veriyi anonim hale getirmek tam olarak ne demek
+bir müşteri verilerimi silin derse ne yapmam gerekiyor
+
+# --- Tüketici hakları ---
+sattığım ürün bozuk çıktı, müşterinin hangi hakları var
+internetten satışta müşteri kaç gün içinde cayabilir
+garanti belgesi vermek zorunda mıyım
+taksitli sattığım müşteri ödemeyi aksatırsa ne yapabilirim
+aboneliğini iptal etmek isteyen müşteriyi ne kadar bekletebilirim
+
+# --- Şirket / ticaret ---
+limited şirket kurmak için en az kaç ortak ve ne kadar sermaye gerekiyor
+ticari defterlerimi kaç yıl saklamak zorundayım
+şirket unvanı seçerken uyulması gereken kurallar neler
+işletme adımı tescil ettirmem gerekir mi
+
+# --- SGK ---
+yeni işe aldığım kişiyi SGK'ya ne zaman bildirmem gerekiyor
+emekli birini çalıştırırsam priminde ne değişiyor
+prim borcumu geç ödersem ne kadar gecikme cezası uygulanıyor
+
+# --- Vergi ---
+faturayı en geç kaç gün içinde düzenlemem gerekiyor
+fatura ve defterleri kaç yıl saklamak zorundayım
+aldığım makinenin amortismanını nasıl hesaplayacağım
+
+# --- Kira / sözleşme ---
+işyeri kiramı süresinden önce feshedebilir miyim
+işyerimi devredersem kira sözleşmesi yeni sahibe geçer mi
+işten ayrılan çalışanıma rekabet yasağı koyabilir miyim, en fazla kaç yıl
+
+# --- İmar ---
+işyerim için kaç araçlık otopark ayırmam gerekiyor
+dükkanımın önüne kapalı bir bölüm eklersem ruhsat gerekir mi

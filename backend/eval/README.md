@@ -133,6 +133,45 @@ A golden set is only as good as this step. Questions that quote the chunk
 verbatim make retrieval look better than it is; questions a real user would
 type are what you want.
 
+### Hand-written questions
+
+Generated questions inherit the wording of the document they came from, which
+flatters retrieval: the question and the chunk share vocabulary. Questions
+written in your own words are harder and more realistic, but nothing can
+guess which chunks answer them — so `eval/annotate.py` asks you.
+
+Write one question per line in `eval/questions_manual.txt` (`#` starts a
+comment, blank lines are ignored), then:
+
+```bash
+python -m eval.annotate
+python -m eval.annotate --resume     # kaldığın yerden devam
+```
+
+For each question it shows the top 10 chunks with their id, source, score and
+first 250 characters, and waits for your answer:
+
+| Input | Meaning |
+| --- | --- |
+| `1,3` | results 1 and 3 answer the question |
+| *(blank)* | none of them do |
+| `s` | skip this question, decide later |
+| `q` | stop, keeping everything recorded so far |
+
+Answers are appended to `eval/dataset_manual.jsonl` as they are made, so an
+interrupted session loses nothing. `--resume` skips questions already in
+either output file and carries on numbering from the highest `manNNN`.
+Skipped questions come back on the next run; only recorded ones are passed
+over. Without `--resume`, the script refuses to start when output already
+exists rather than overwriting your work.
+
+**Questions with no answer in the top 10 are the valuable ones.** They go to
+`eval/unanswered_manual.jsonl` with empty `relevant_chunk_ids` and a
+`NO-HIT-IN-TOP10` note. Each is either a retrieval failure worth fixing or a
+question the corpus genuinely cannot answer — decide which before adding it
+to the golden set. The loader rejects empty `relevant_chunk_ids`, so such a
+row cannot slip in unnoticed.
+
 **3. Record a baseline**
 
 ```bash
