@@ -3,3 +3,28 @@
 {"id": "q003", "question": "Sıfıra yakın varyansa sahip kaç sensör veri setinden çıkarılmıştır?", "relevant_chunk_ids": [15], "note": "Yedi sensör çıkarılıp 17 öznitelik kalıyor; sayısal detay sorusu."}
 {"id": "q004", "question": "Model performansı hangi değerlendirme metrikleriyle ölçülmüştür?", "relevant_chunk_ids": [21, 22], "note": "R, RMSE, MAE ve R² iki ardışık chunk'a yayılmış."}
 {"id": "q005", "question": "FD002 alt kümesinde eğitim için kaç motor bulunmaktadır?", "relevant_chunk_ids": [14], "note": "Tablo içinden bilgi çekme; retrieval için zor bir örnek."}
+{"id": "man001", "question": "işten çıkardığım işçi dava açmak isterse ne kadar süresi var", "relevant_chunk_ids": [893], "note": "MANUAL | source=is-kanunu.pdf"}
+{"id": "man002", "question": "yeni işe aldığım birine en fazla ne kadar deneme süresi verebilirim", "relevant_chunk_ids": [878], "note": "MANUAL | source=is-kanunu.pdf"}
+{"id": "man003", "question": "çalışanın yıllık izin günü kaç yıl çalıştığına göre nasıl değişiyor", "relevant_chunk_ids": [511, 506, 1008], "note": "MANUAL | source=borclar-kanunu.pdf, is-kanunu.pdf"}
+{"id": "man005", "question": "doğum yapan çalışanım ne kadar izin kullanabilir", "relevant_chunk_ids": [1069, 1062, 1158], "note": "MANUAL | source=is-kanunu.pdf"}
+{"id": "man008", "question": "iş kazası olursa nereye ve kaç gün içinde bildirmem lazım", "relevant_chunk_ids": [3083, 3084], "note": "MANUAL | source=sosyal-sigortalar-kanunu.pdf"}
+{"id": "man010", "question": "az tehlikeli sınıfta yer alan bir işyeri neye göre belirleniyor", "relevant_chunk_ids": [1243], "note": "MANUAL | source=isg-kanunu.pdf"}
+{"id": "man011", "question": "acil durum planı hazırlamak zorunda mıyım", "relevant_chunk_ids": [1246, 1247], "note": "MANUAL | source=isg-kanunu.pdf"}
+{"id": "man012", "question": "müşteri bilgilerimi yurt dışındaki bir sunucuda tutabilir miyim", "relevant_chunk_ids": [1978, 1413, 1402, 1403], "note": "MANUAL | source=kvkk-kanunu.pdf, kvkk-uygulama-rehberi.pdf"}
+{"id": "man013", "question": "VERBİS'e kayıt olmak zorunda mıyım", "relevant_chunk_ids": [2123, 2124], "note": "MANUAL | source=kvkk-uygulama-rehberi.pdf"}
+{"id": "man016", "question": "çalışanların özlük dosyalarını ne kadar süre saklamalıyım", "relevant_chunk_ids": [3808, 1894], "note": "MANUAL | source=kvkk-uygulama-rehberi.pdf, sosyal-sigortalar-kanunu.pdf"}
+{"id": "man017", "question": "müşteri şifrelerini veritabanında nasıl saklamam gerekiyor", "relevant_chunk_ids": [2247, 2241, 2243], "note": "MANUAL | source=kvkk-veri-guvenligi-rehberi.pdf"}
+{"id": "man018", "question": "kişisel veriyi anonim hale getirmek tam olarak ne demek", "relevant_chunk_ids": [1589, 1958, 1820, 1959, 2094, 1823], "note": "MANUAL | source=kvkk-orneklerle-rehber.pdf, kvkk-uygulama-rehberi.pdf"}
+{"id": "man020", "question": "sattığım ürün bozuk çıktı, müşterinin hangi hakları var", "relevant_chunk_ids": [5008, 5173, 273], "note": "MANUAL | source=borclar-kanunu.pdf, tuketicinin-korunmasi.pdf"}
+{"id": "man021", "question": "internetten satışta müşteri kaç gün içinde cayabilir", "relevant_chunk_ids": [5115], "note": "MANUAL | source=tuketicinin-korunmasi.pdf"}
+{"id": "man022", "question": "garanti belgesi vermek zorunda mıyım", "relevant_chunk_ids": [5172], "note": "MANUAL | source=tuketicinin-korunmasi.pdf"}
+{"id": "man023", "question": "taksitli sattığım müşteri ödemeyi aksatırsa ne yapabilirim", "relevant_chunk_ids": [313, 336, 315], "note": "MANUAL | source=borclar-kanunu.pdf"}
+{"id": "man024", "question": "aboneliğini iptal etmek isteyen müşteriyi ne kadar bekletebilirim", "relevant_chunk_ids": [5159], "note": "MANUAL | source=tuketicinin-korunmasi.pdf"}
+{"id": "man025", "question": "limited şirket kurmak için en az kaç ortak ve ne kadar sermaye gerekiyor", "relevant_chunk_ids": [6388, 6389], "note": "MANUAL | source=turk-ticaret-kanunu.pdf"}
+{"id": "man026", "question": "ticari defterlerimi kaç yıl saklamak zorundayım", "relevant_chunk_ids": [5531, 8508], "note": "MANUAL | source=turk-ticaret-kanunu.pdf, vergi-usul-kanunu.pdf"}
+{"id": "man031", "question": "prim borcumu geç ödersem ne kadar gecikme cezası uygulanıyor", "relevant_chunk_ids": [3908], "note": "MANUAL | source=sosyal-sigortalar-kanunu.pdf"}
+{"id": "man033", "question": "fatura ve defterleri kaç yıl saklamak zorundayım", "relevant_chunk_ids": [5531, 8508, 8509], "note": "MANUAL | source=turk-ticaret-kanunu.pdf, vergi-usul-kanunu.pdf"}
+{"id": "man034", "question": "aldığım makinenin amortismanını nasıl hesaplayacağım", "relevant_chunk_ids": [9089, 9090], "note": "MANUAL | source=vergi-usul-kanunu.pdf"}
+{"id": "man035", "question": "işyeri kiramı süresinden önce feshedebilir miyim", "relevant_chunk_ids": [421, 407], "note": "MANUAL | source=borclar-kanunu.pdf"}
+{"id": "man036", "question": "işyerimi devredersem kira sözleşmesi yeni sahibe geçer mi", "relevant_chunk_ids": [389], "note": "MANUAL | source=borclar-kanunu.pdf"}
+{"id": "man039", "question": "dükkanımın önüne kapalı bir bölüm eklersem ruhsat gerekir mi", "relevant_chunk_ids": [2814], "note": "MANUAL | source=planli-alanlar-imar-yonetmeligi.pdf"}
