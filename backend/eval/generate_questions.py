@@ -18,14 +18,13 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from eval.chunk_filter import boilerplate_reasons
-from eval.dataset import EvalCase, write_dataset
+from eval.dataset import PROTECTED_OUTPUT, EvalCase, write_dataset
 from rag.llm import complete
 from rag.service import retrieve
 from rag.store import DocumentStore
 
 DEFAULT_DB = Path("data/kobi_rag.db")
 DEFAULT_OUTPUT = Path("eval/dataset_draft.jsonl")
-PROTECTED_OUTPUT = "dataset.jsonl"
 MIN_CHUNK_CHARS = 200
 # Taslakta gösterilecek aday chunk sayısı ve önizleme uzunluğu
 CANDIDATE_K = 5

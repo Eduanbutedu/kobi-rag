@@ -5,6 +5,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from eval.textio import read_text_utf8
+
+PROTECTED_OUTPUT = "dataset.jsonl"
+
 
 class DatasetError(ValueError):
     """Raised when a golden-set file is malformed."""
@@ -82,7 +86,7 @@ def load_dataset(path: str | Path) -> list[EvalCase]:
 
     cases: list[EvalCase] = []
     seen: dict[str, int] = {}
-    for number, raw in enumerate(file_path.read_text(encoding="utf-8").splitlines(), start=1):
+    for number, raw in enumerate(read_text_utf8(file_path).splitlines(), start=1):
         if not raw.strip():
             continue
         try:

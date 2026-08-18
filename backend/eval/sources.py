@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from eval.textio import read_text_utf8
+
 # Slug dosya adına dönüştüğü için dar tutuluyor: dizin ayracı ve ".." giremez
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 KINDS = ("mevzuat", "rehber")
@@ -74,7 +76,7 @@ def load_sources(path: str | Path) -> list[Source]:
 
     sources: list[Source] = []
     seen: dict[str, int] = {}
-    for number, line in enumerate(file_path.read_text(encoding="utf-8").splitlines(), start=1):
+    for number, line in enumerate(read_text_utf8(file_path).splitlines(), start=1):
         source = parse_source_line(line, number)
         if source is None:
             continue
