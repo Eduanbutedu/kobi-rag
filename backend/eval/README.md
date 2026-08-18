@@ -87,13 +87,47 @@ python -m eval.generate_questions -n 30 --seed 42
 
 Writes `eval/dataset_draft.jsonl`. This never touches `dataset.jsonl`.
 
+Chunks are sampled evenly across documents rather than at random. Random
+sampling follows document size, and the two largest laws are half the
+corpus, so the questions would pile up there. Each document is drawn from in
+turn; one that runs out of usable chunks drops out and the rest take up its
+share. `--per-document 5` sets an exact quota per document instead, with no
+redistribution. The same `--seed` always yields the same sample.
+
+Boilerplate is filtered out first — tables of contents, amendment tables and
+blocks of repealed articles produce unusable questions. The run reports how
+many chunks were dropped and why. See `chunk_filter.py` for the thresholds
+and how they were calibrated.
+
 **2. Review the draft by hand**
 
 The local 4B model writes clumsy questions and sometimes marks the wrong
-chunk. Fix the wording, correct `relevant_chunk_ids`, delete the bad rows,
-and pay attention to any note containing `CHECK:` — those were auto-flagged
-as meta-referencing, yes/no, very short, or possibly not Turkish. Move the
-rows you keep into `eval/dataset.jsonl`.
+chunk. Fix the wording, correct `relevant_chunk_ids`, and delete bad rows.
+Pay attention to any note containing `CHECK:` — those were auto-flagged as
+meta-referencing, yes/no, very short, or possibly not Turkish.
+
+Each draft row carries three fields to review against. They exist only to
+help you decide; `load_dataset` ignores every field it does not recognise,
+so a row can be pasted into `dataset.jsonl` untouched:
+
+| Field | Use |
+| --- | --- |
+| `source` | which document the question came from |
+| `chunk_preview` | first 200 characters of the source chunk — check the question is actually answerable from it |
+| `candidate_chunk_ids` | top-5 retrieval hits for this question |
+| `candidates` | those hits with source and preview text |
+
+**Widening `relevant_chunk_ids` is the point of the candidates.** In
+legislation a question is often answered by several articles, and marking
+only the chunk the question was generated from understates Recall@1: a run
+that retrieves an equally correct article at rank 1 is scored as a miss. Read
+each candidate preview and ask "does this one also answer the question?" If
+it does, add its id to `relevant_chunk_ids`. Nothing is added for you — the
+candidates are suggestions, and some will be irrelevant.
+
+If the source chunk itself is missing from the candidates, that is worth
+noticing too: either the question is too vague to retrieve, or you have found
+a genuine retrieval failure worth keeping in the set.
 
 A golden set is only as good as this step. Questions that quote the chunk
 verbatim make retrieval look better than it is; questions a real user would
