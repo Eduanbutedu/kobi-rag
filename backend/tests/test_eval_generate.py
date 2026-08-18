@@ -104,6 +104,119 @@ def test_clean_question_rejects_unusable_replies(raw):
     assert clean_question(raw) == ""
 
 
+# --- Soru mu, yoksa soru işareti iliştirilmiş düz cümle mi? -----------------
+
+# 80 chunk'lık gerçek çalışmadan çıkan gerileme örnekleri
+STATEMENTS_WITH_QUESTION_MARK = [
+    "Kişisel verilerin nasıl yönetileceği açıkça belirlenmelidir.?",
+    "İşyeri hekiminden alınan sağlık raporları işe başlatılamaz?",
+    "Ormanların korunması, planlanması, yetiştirilmesi, işletilmesi, "
+    "sınırlandırılması bu esaslara göre yapılır?",
+]
+
+
+@pytest.mark.parametrize("line", STATEMENTS_WITH_QUESTION_MARK)
+def test_statements_with_a_question_mark_are_rejected(line):
+    assert clean_question(line) == ""
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Hangi belgeler başvuruda zorunludur?",
+        "İşveren kaç gün içinde bildirim yapmak zorundadır?",
+        "Kıdem tazminatı nasıl hesaplanır?",
+        "Veri sorumlusu kimdir?",
+        "Bu yükümlülük neden getirilmiştir?",
+        "Başvuru nereye yapılır?",
+        "Ödeme ne zaman yapılır?",
+        "Tazminat tutarı ne kadardır?",
+        "İtiraz süresi kaç gündür?",
+        "Kurul hangisine karar verir?",
+    ],
+)
+def test_real_questions_are_accepted(line):
+    assert clean_question(line) == line
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Bu karar kesin midir?",
+        "Sözleşme feshedilebilir mi?",
+        "Bu tutar yeterli mudur?",
+        "Başvuru süresi uzatılmış mıdır?",
+    ],
+)
+def test_questions_marked_only_by_the_particle_are_accepted(line):
+    assert clean_question(line) == line
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # "ne" -> nedeniyle / "kim" -> kimyasal / "kaç" -> kaçınılmaz
+        "Bu düzenleme mücbir sebep nedeniyle uygulanmamıştır?",
+        "Tehlikeli kimyasal maddelerin listesi güncellenmiştir?",
+        "Bu sonuç kaçınılmaz olarak ortaya çıkmıştır?",
+        "İşyerinde kimlik doğrulaması yapılır?",
+        "Kimse bu haktan vazgeçemez?",
+        # "mi" -> mimari / miktar / milyon
+        "Binanın mimari projesi onaylanır?",
+        "Ödenecek miktar bankaya yatırılır?",
+        "Bilanço tutarı 100 milyon lirayı aşamaz?",
+        # cümle ortasındaki unvan "müdür" soru eki değildir
+        "Genel müdür bu yetkiyi devredemez?",
+    ],
+)
+def test_lookalike_words_do_not_make_a_statement_a_question(line):
+    assert clean_question(line) == ""
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Hangisinde bu şart aranır?",
+        "Kurul hangisine karar verir?",
+        "Bu oran kaçıncı maddede belirlenir?",
+        "Sorumluluk kimlerdedir?",
+        "Başvuru nerelerden yapılabilir?",
+        "Bildirim nasıldır?",
+    ],
+)
+def test_inflected_question_words_are_matched(line):
+    assert clean_question(line) == line
+
+
+def test_niyet_does_not_match_the_question_word_niye():
+    assert clean_question("Tarafların niyeti sözleşmede belirtilir?") == ""
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("İşveren kaç gün içinde bildirir ?", "İşveren kaç gün içinde bildirir?"),
+        ("İşveren kaç gün içinde bildirir??", "İşveren kaç gün içinde bildirir?"),
+    ],
+)
+def test_harmless_punctuation_is_normalised(raw, expected):
+    assert clean_question(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Kişisel veriler nasıl korunur.?",
+        "Kişisel veriler nasıl korunur .?",
+        "Kişisel veriler nasıl korunur!?",
+        "Kişisel veriler nasıl korunur;?",
+    ],
+)
+def test_sentence_punctuation_before_the_question_mark_is_rejected(line):
+    # Soru kelimesi olsa bile ".?" düz cümle imzasıdır
+    assert clean_question(line) == ""
+
+
 def test_select_chunks_is_reproducible_for_a_seed():
     chunks = _chunks(20)
     assert select_chunks(chunks, 5, seed=42, min_chars=200) == select_chunks(

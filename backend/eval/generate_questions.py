@@ -80,6 +80,61 @@ _META_MENTION = re.compile(
 _YES_NO = re.compile(r"\b(mi|mı|mu|mü)(dir|dır|dur|dür)?\s*\?$", re.IGNORECASE)
 _LATIN_ONLY = re.compile(r"^[\x00-\x7f]+$")
 
+# Soru kelimeleri. Ekli biçimler açıkça sayılıyor ve iki yanı da \b ile
+# sınırlanıyor: aksi hâlde "ne" -> "nedeniyle", "kim" -> "kimyasal",
+# "kaç" -> "kaçınılmaz" içinde eşleşir.
+_QUESTION_WORD = re.compile(
+    r"\b(?:"
+    # Bu köklerle başlayan başka yaygın kelime yok, ek serbest bırakılabilir
+    r"hangi\w*"
+    r"|nasıl\w*"
+    r"|nere\w*"
+    r"|niçin"
+    # "niye" serbest bırakılamaz: "niyet" onunla başlıyor
+    r"|niye"
+    # Bu kökler gerçek kelimelerle çakışıyor (kaçınılmaz, kimyasal, nedeniyle),
+    # bu yüzden ekleri tek tek sayılıyor
+    r"|kaç(?:ı|a|ta|tan|tır|ar|ıncı|ında|ının)?"
+    r"|kim(?:e|i|in|den|dir|ler|lere|lerin|lerde|lerdir|lerdedir)?"
+    r"|ne(?:yi|ye|yin|den|dir|ler|lere|lerin|lerdir)?"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Ayrı yazılan soru eki. Türkçede cümlenin sonunda durur, bu yüzden yalnızca
+# son birkaç kelimede aranıyor: "müdür" hem soru eki hem de unvan olduğu için
+# cümle ortasındaki bir "genel müdür" soru sayılmamalı.
+_QUESTION_PARTICLE = re.compile(
+    r"(?:mi|mı|mu|mü)"
+    r"(?:dir|dır|dur|dür|sin|sın|sun|sün|siniz|sınız|sunuz|sünüz"
+    r"|yim|yım|yum|yüm|ydi|ydı|ydu|ydü|ymiş|ymış|ymuş|ymüş)?",
+    re.IGNORECASE,
+)
+PARTICLE_WINDOW_WORDS = 3
+
+# Modelin düz cümlenin sonuna soru işareti iliştirdiğinin işareti: ".?", "!?"
+_PUNCTUATION_RESIDUE = re.compile(r"[.!;:,]\s*\?")
+
+
+def has_question_particle(text: str) -> bool:
+    """Whether the sentence ends with a separately written Turkish question particle."""
+    words = text.rstrip("?").split()
+    return any(
+        _QUESTION_PARTICLE.fullmatch(word.strip(".,;:!"))
+        for word in words[-PARTICLE_WINDOW_WORDS:]
+    )
+
+
+def looks_like_question(text: str) -> bool:
+    """Whether the sentence is really interrogative, not a statement plus '?'.
+
+    A question mark alone means nothing: the model reliably ends declarative
+    sentences with one. Turkish marks a question either with a question word
+    or with the separately written mi/mı/mu/mü particle, so one of the two
+    has to be present.
+    """
+    return bool(_QUESTION_WORD.search(text)) or has_question_particle(text)
+
 
 def build_prompt(chunk_text: str) -> str:
     return (
@@ -109,8 +164,19 @@ def clean_question(raw: str) -> str:
         if ": " in line and line.endswith("?"):
             line = line.rsplit(": ", 1)[-1].strip().strip('"').strip()
         line = _META_PREFIX.sub("", line).strip()
-        if line and line.endswith("?") and len(line) > 10:
-            best = line[0].upper() + line[1:]
+
+        # Soru işaretinden önceki boşluk ve yinelenen işaretler zararsız, düzelt
+        line = re.sub(r"\s+\?", "?", line)
+        line = re.sub(r"\?{2,}", "?", line)
+        # Ama ".?" düz cümleye iliştirilmiş soru işaretidir, satırı ele
+        if _PUNCTUATION_RESIDUE.search(line):
+            continue
+
+        if not (line.endswith("?") and len(line) > 10):
+            continue
+        if not looks_like_question(line):
+            continue
+        best = line[0].upper() + line[1:]
     return best
 
 
