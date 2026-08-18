@@ -2,8 +2,9 @@
 
 Legislation PDFs are full of material that reads like text but answers no
 question: tables of contents, article-heading lists, amendment and footnote
-tables, and blocks of repealed articles. Questions generated from those are
-unusable, so they are filtered out before sampling.
+tables, blocks of repealed articles, publisher colophons and bibliographies.
+Questions generated from those are unusable, so they are filtered out before
+sampling.
 
 Every threshold below was calibrated against the ingested corpus rather than
 guessed. The measured split on 8,851 chunks:
@@ -16,7 +17,14 @@ guessed. The measured split on 8,851 chunks:
 
 Deliberately not used: "share of lines ending in a number". It looks like a
 table signal but Turkish legal prose cites article numbers at line ends, so
-real text scored 0.40 on it -- as high as the boilerplate.
+real text scored 0.40 on it -- as high as the boilerplate. Likewise no
+keyword match on "baskı"/"basım" for colophons: Borçlar Kanunu's publishing
+contract articles use those words throughout, and 23 real articles would go
+with them.
+
+Known gap: a handful of bibliography entries in the KVKK guides carry only
+one link and one citation line, so they survive. Catching them needs a looser
+rule that also matches ordinary text, which is the worse trade.
 """
 
 import re
@@ -38,9 +46,37 @@ MAX_BLANK_LINE_RATIO = 0.5
 SHORT_LINE_CHARS = 25
 MAX_SHORT_LINE_RATIO = 0.8
 SHORT_LINE_ESCAPE_WORDS = 12
+# Künye: tek bir alan yetmez, en az bu kadar farklı künye alanı bir arada olmalı
+MIN_COLOPHON_MARKERS = 2
+# Kaynakça: tek bir bağlantı olağan, birden fazlası kaynak listesi demek
+MAX_URLS = 1
+# Künye satırı: "..., Seçkin Yayıncılık, 2009" gibi yılla biten kaynak satırı
+MAX_CITATION_LINES = 1
 
 _FILLER_RUN = re.compile(r"[.\-_·]{3,}")
 _REPEAL_MARKER = re.compile(r"\(\s*(?:Mülga|Değişik|Ek|İptal)\s*:", re.IGNORECASE)
+# Tüm adresi tek eşleşmede yutuyor: "https?://|www\." deseni
+# "https://www.x" için iki kez sayardı
+_URL = re.compile(r"(?:https?://|www\.)\S*", re.IGNORECASE)
+# Kaynakça satırı: virgülden sonra yılla biten satır. Tek başına bir satır
+# olağan olabildiği için eşik ikide tutuluyor; birde 27 chunk eşleşiyor ve
+# çoğu sıradan metin.
+_CITATION_LINE = re.compile(r",\s*(?:\w+\s+)?(?:19|20)\d{2}\s*[.,;]?\s*$", re.MULTILINE)
+
+# Künye alanları. Tek tek hiçbiri yeterli değil: "Baskı"/"basım" gibi sözcükler
+# Borçlar Kanunu'nun yayım sözleşmesi maddelerinde olağan biçimde geçiyor ve
+# tek başına kullanılsalar 23 gerçek madde metnini elerlerdi. Bunun yerine
+# yalnızca alan etiketleri (iki nokta üst üste ile) ve ISBN sayılıyor.
+_COLOPHON_MARKERS = (
+    re.compile(r"\bISBN\b", re.IGNORECASE),
+    re.compile(r"\bYayın(?:ları|lar|evi)?\s*(?:No|Numarası)?\s*:", re.IGNORECASE),
+    re.compile(r"\bAdres\s*:", re.IGNORECASE),
+    re.compile(r"\bTelefon\s*:|\bTel\s*:|\bFaks\s*:", re.IGNORECASE),
+    re.compile(r"\bWeb\s*:|\bE-?posta\s*:", re.IGNORECASE),
+    re.compile(r"\bSertifika\s*No\s*:", re.IGNORECASE),
+    re.compile(r"\bBasım\s*(?:Yeri|Tarihi)\s*:|\bMatbaa\s*:", re.IGNORECASE),
+    re.compile(r"\bErişim\s*(?:Tarihi)?\s*:", re.IGNORECASE),
+)
 
 
 def _measure(text: str) -> dict[str, float]:
@@ -63,6 +99,9 @@ def _measure(text: str) -> dict[str, float]:
         "repeal_ratio": len(_REPEAL_MARKER.findall(stripped)) / line_count,
         "blank_line_ratio": (len(raw_lines) - len(lines)) / max(len(raw_lines), 1),
         "short_line_ratio": sum(1 for line in lines if len(line) < SHORT_LINE_CHARS) / line_count,
+        "colophon_markers": sum(1 for marker in _COLOPHON_MARKERS if marker.search(stripped)),
+        "url_count": len(_URL.findall(stripped)),
+        "citation_lines": len(_CITATION_LINE.findall(stripped)),
     }
 
 
@@ -91,6 +130,10 @@ def boilerplate_reasons(text: str) -> list[str]:
         reasons.append("blank-line-leaders")
     if m["short_line_ratio"] > MAX_SHORT_LINE_RATIO and not has_sentence_line:
         reasons.append("short-lines")
+    if m["colophon_markers"] >= MIN_COLOPHON_MARKERS:
+        reasons.append("colophon")
+    if m["url_count"] > MAX_URLS or m["citation_lines"] > MAX_CITATION_LINES:
+        reasons.append("link-list")
     return reasons
 
 

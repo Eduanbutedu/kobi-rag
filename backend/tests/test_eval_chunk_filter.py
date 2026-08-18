@@ -79,10 +79,54 @@ AMENDMENT_LIST = (
 )
 
 
+# id=1702, kvkk-uygulama-rehberi.pdf -- künye sayfası
+COLOPHON_ISBN = (
+    "KİŞİSEL VERİLERİN KORUNMASI KANUNUNA İLİŞKİN UYGULAMA REHBERİ\n"
+    "KVKK Yayınları\nISBN : 978-975-19-6848-7\nMart 2018, Ankara \n"
+    "Kişisel Verileri Koruma Kurumu\nAdres: Nasuh Akar Mahallesi 1407. Sokak No: 4\n"
+)
+
+# id=1512, kvkk-orneklerle-rehber.pdf -- künyenin devamı
+COLOPHON_CONTACT = (
+    "Sokak No: 4 Çankaya/ANKARA\nTelefon: 0 312 216 50 00\nWeb: www.kvkk.gov.tr\n\n"
+    "3 \n“Bu kitapta yer alan içeriklerin, bireysel kullanım dışında izin alınmadan "
+    "kısmen ya da tamamen kopyalanması, çoğaltılması, kullanılması, yayınlanması ve "
+    "dağıtılması kesinlikle yasaktır.\n"
+)
+
+# id=2273, kvkk-veri-guvenligi-rehberi.pdf -- kaynakça
+BIBLIOGRAPHY = (
+    "http://www.udhb.gov.tr/ doc/\nsiberg/2016-2019guvenlik.pdf \n"
+    "Y. Vural, Ş. Sağıroğlu, Kurumsal Bilgi Güvenliği: Güncel Gelişmeler, Bildiriler \n"
+    "Kitabı Uluslararası Katılımlı Bilgi Güvenliği ve Kriptoloji Konferansı, 2007\n"
+    "H.Yılmaz, TS ISO/IEC 27001 Bilgi Güvenliği Yönetimi Standardı Kapsamında \n"
+    "bkz. https://www.enisa.europa.eu/publications/hardware-threat-landscape\n"
+)
+
+# id=599, borclar-kanunu.pdf -- yayım sözleşmesi maddesi; "baskı"/"basım" geçiyor
+# ama künye değil. Anahtar kelimeye dayalı bir eleme bunu yanlışlıkla atardı.
+PROSE_PUBLISHING_CONTRACT = (
+    "II. Yayımlatanın tasarruf hakkı \n"
+    "MADDE 490- Yayımlatan, sözleşmede kararlaştırılan süre sona ermedikçe veya süre \n"
+    "belirlenmemişse kararlaştırılan baskı adedinin tükenmesi için alışılmış süre \n"
+    "geçmedikçe, eserin tamamı veya bir bölümü üzerinde, yayımcının zararına olacak \n"
+    "biçimde tasarrufta bulunamaz. Süreli yayınlarda basım sayısı serbesttir."
+)
+
+# Tek bir bağlantı içeren olağan metin elenmemeli
+PROSE_WITH_ONE_URL = (
+    "Veri sorumlusu, başvuruları Kurumun internet sitesi olan www.kvkk.gov.tr \n"
+    "üzerinden yayımlanan usul ve esaslara uygun şekilde sonuçlandırmak zorundadır. \n"
+    "Başvurunun reddedilmesi hâlinde gerekçe yazılı olarak bildirilir."
+)
+
+
 @pytest.mark.parametrize(
     ("name", "text"),
     [
         ("prose_ttk", PROSE_TTK),
+        ("prose_publishing_contract", PROSE_PUBLISHING_CONTRACT),
+        ("prose_with_one_url", PROSE_WITH_ONE_URL),
         ("prose_short_headings", PROSE_SHORT_HEADINGS),
         ("prose_with_amendment_note", PROSE_WITH_AMENDMENT_NOTE),
     ],
@@ -101,11 +145,74 @@ def test_real_prose_is_kept(name, text):
         ("repealed_articles", REPEALED_ARTICLES),
         ("numeric_table", NUMERIC_TABLE),
         ("amendment_list", AMENDMENT_LIST),
+        ("colophon_isbn", COLOPHON_ISBN),
+        ("colophon_contact", COLOPHON_CONTACT),
+        ("bibliography", BIBLIOGRAPHY),
     ],
 )
 def test_real_boilerplate_is_rejected(name, text):
     assert boilerplate_reasons(text), f"{name} wrongly kept"
     assert is_informative(text) is False
+
+
+def test_colophon_and_link_list_name_their_reason():
+    assert "colophon" in boilerplate_reasons(COLOPHON_ISBN)
+    assert "colophon" in boilerplate_reasons(COLOPHON_CONTACT)
+    assert "link-list" in boilerplate_reasons(BIBLIOGRAPHY)
+
+
+def test_a_single_marker_is_not_enough_for_a_colophon():
+    # Başvuruda adres istenmesi künye değildir
+    text = (
+        "Başvuru sahibi, dilekçesinde Adres: bilgisini eksiksiz belirtmek zorundadır. \n"
+        "Kurul, eksik başvuruları tamamlanmak üzere ilgilisine iade eder ve süre verir."
+    )
+    assert "colophon" not in boilerplate_reasons(text)
+
+
+def test_one_url_is_allowed_but_two_are_not():
+    one = (
+        "Kurumun internet sitesi www.kvkk.gov.tr üzerinden başvuru yapılabilir ve "
+        "başvurunun sonucu ilgili kişiye yazılı olarak bildirilir; başvurunun "
+        "reddedilmesi hâlinde gerekçesi ayrıca belirtilir."
+    )
+    two = one + " Ayrıca https://ornek.gov.tr adresine de bakınız."
+    assert "link-list" not in boilerplate_reasons(one)
+    assert "link-list" in boilerplate_reasons(two)
+
+
+def test_a_scheme_and_host_in_one_address_counts_once():
+    # "https://www.x" tek adrestir; iki ayrı bağlantı sayılmamalı
+    text = (
+        "Başvurular https://www.kvkk.gov.tr adresinden yapılır ve sonuç ilgili kişiye "
+        "yazılı olarak bildirilir; reddedilmesi hâlinde gerekçesi ayrıca belirtilir."
+    )
+    assert "link-list" not in boilerplate_reasons(text)
+
+
+def test_citation_lines_mark_a_bibliography():
+    # id=2271, kvkk-veri-guvenligi-rehberi.pdf
+    text = (
+        "K. OK, Bilgi ve Bilgi Yönetimine Giriş, 1. Baskı, Papatya Yayıncılık Eğitim, \n"
+        "İstanbul, Ekim 2013\n"
+        "H. Özdemir, Elektronik Haberleşme Alanında Kişisel Verilerin Özel Hukuk \n"
+        "Hükümlerine Göre Korunması, Seçkin Yayıncılık, 2009 \n"
+    )
+    assert "link-list" in boilerplate_reasons(text)
+
+
+def test_a_single_year_ending_line_is_not_a_bibliography():
+    text = (
+        "Bu Kanun hükümleri, 4/1/1961 tarihli ve 213 sayılı Vergi Usul Kanununa göre \n"
+        "tutulan defterler bakımından da uygulanır ve saklama süresi beş yıldır, 2013 \n"
+        "yılından önceki dönemler için ayrıca değerlendirme yapılır."
+    )
+    assert "link-list" not in boilerplate_reasons(text)
+
+
+def test_publishing_contract_articles_survive_colophon_filtering():
+    # "baskı adedi", "basım sayısı" gerçek madde metninde geçiyor
+    assert boilerplate_reasons(PROSE_PUBLISHING_CONTRACT) == []
 
 
 def test_each_signal_names_its_own_reason():
