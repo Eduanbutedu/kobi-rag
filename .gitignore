@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Eval question drafts: reviewed by hand, then merged into eval/dataset.jsonl
+backend/eval/dataset_draft.jsonl

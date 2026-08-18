@@ -74,6 +74,32 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
     return _dedupe_paragraphs(_strip_thinking(response.choices[0].message.content or ""))
 
 
+def complete(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    temperature: float = 0.3,
+    max_tokens: int = 200,
+) -> str:
+    """Single-turn completion against the local model, with thinking stripped.
+
+    Used by offline tooling (such as eval question generation) that needs the
+    model but not the RAG answer prompt.
+    """
+    client, model_id = _get_client()
+
+    response = client.chat.completions.create(
+        model=model_id,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    return _strip_thinking(response.choices[0].message.content or "")
+
+
 def stream_answer(question: str, chunks: list[dict]) -> Iterator[str]:
     """Yield answer text incrementally as the model generates it."""
     client, model_id = _get_client()
