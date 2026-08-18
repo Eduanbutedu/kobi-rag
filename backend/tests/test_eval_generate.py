@@ -94,6 +94,46 @@ def test_quality_flags_allow_wh_questions_ending_in_dir():
     assert "yes-no" not in quality_flags("C-MAPSS veri setinin amacı nedir?")
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        # Gerçek çalışmadan: dokümanın kendi yapısına atıf
+        "Hangi tanımda 'imha' terimi kullanılmıştır?",
+        "Hangi maddede bu yükümlülük düzenlenmiştir?",
+        "Hangi bölümde veri güvenliği anlatılır?",
+        "Bu fıkrada hangi süre öngörülmüştür?",
+        # Gerçek çalışmadan: hiçbir somut şeye bağlanmayan soru
+        "Hangi model değerlendirme yöntemlerini kullanmaktadır?",
+        "Hangi kurum bu konuda yetkilidir?",
+    ],
+)
+def test_structural_and_unanchored_questions_are_flagged(question):
+    assert "structural-reference" in quality_flags(question)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        # Sayı ya da özel ad soruyu somut bir içeriğe bağlıyor
+        "FD002 alt kümesinde eğitim için kaç motor bulunmaktadır?",
+        "İşveren kaç gün içinde bildirim yapmak zorundadır?",
+        "Kişisel Verileri Koruma Kurulu başvuruyu kaç ay içinde sonuçlandırır?",
+        "Vergi Usul Kanununa göre defterler ne kadar süreyle saklanır?",
+        # "Hangi" ile açılsa da somut bir dayanak taşıyorsa işaretlenmez
+        "Hangi belgeler 5510 sayılı Kanunda sayılmıştır?",
+        "Hangi kurum Kişisel Verileri Koruma Kurulunu denetler?",
+    ],
+)
+def test_anchored_questions_are_not_flagged_as_structural(question):
+    assert "structural-reference" not in quality_flags(question)
+
+
+def test_generic_hangi_questions_are_flagged_for_review():
+    # Bilinçli olarak geniş tutuldu: dayanaksız "Hangi <ad>" soruları
+    # silinmiyor, yalnızca incelensin diye işaretleniyor
+    assert "structural-reference" in quality_flags("Hangi belgeler başvuruda zorunludur?")
+
+
 def test_quality_flags_catch_short_and_ascii_only_questions():
     assert "very-short" in quality_flags("Kaç motor var?")
     assert "maybe-not-turkish" in quality_flags("How many engines are in the FD002 subset?")

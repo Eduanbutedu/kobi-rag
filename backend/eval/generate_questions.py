@@ -115,6 +115,21 @@ PARTICLE_WINDOW_WORDS = 3
 # Modelin düz cümlenin sonuna soru işareti iliştirdiğinin işareti: ".?", "!?"
 _PUNCTUATION_RESIDUE = re.compile(r"[.!;:,]\s*\?")
 
+# Dokümanın konusunu değil, kendi yapısını soran kalıplar: "hangi maddede ...?"
+_STRUCTURAL_TARGET = re.compile(
+    # Yalnızca dokümanın kendi parçalarını adlandıran sözcükler. "belge" ve "ek"
+    # bilerek yok: "hangi belgeler başvuruda zorunludur" gerçek dünyadaki
+    # evrakı sorar, "ek\w*" ise "ekonomik" gibi kelimelere de eşleşirdi.
+    # "şekil" de yok: "hangi şekilde" olağan bir soru kalıbı.
+    r"\b(?:hangi|bu|söz konusu|ilgili)\s+"
+    r"(?:tanım|madde|fıkra|bent|bölüm|kısım|başlık|paragraf|tablo|sayfa|"
+    r"cümle|metin|doküman)"
+    r"\w*\b",
+    re.IGNORECASE,
+)
+# "Hangi kurum ...?" gibi, özne yerinde adı konmamış genel bir adla açılan soru
+_GENERIC_OPENING = re.compile(r"^\s*hangi\w*\s+\w+", re.IGNORECASE)
+
 
 def has_question_particle(text: str) -> bool:
     """Whether the sentence ends with a separately written Turkish question particle."""
@@ -180,6 +195,31 @@ def clean_question(raw: str) -> str:
     return best
 
 
+def is_structural_reference(question: str) -> bool:
+    """Whether the question asks about the document's own structure.
+
+    Two shapes both make a question useless for retrieval. One points at a
+    part of the document rather than its subject ("hangi tanımda", "hangi
+    maddede"). The other names no concrete thing at all -- no number, no
+    proper noun -- so nothing anchors it to a particular chunk, as in
+    "Hangi model değerlendirme yöntemlerini kullanmaktadır?".
+    """
+    if _STRUCTURAL_TARGET.search(question):
+        return True
+    # Yalnızca "Hangi <ad> ...?" ile açılan sorular inceleniyor: burada özne
+    # yerinde adı konmamış genel bir ad var. "İşveren kaç gün içinde ...?"
+    # gibi gerçek bir özneyle başlayan soru bu kurala girmez.
+    if not _GENERIC_OPENING.match(question):
+        return False
+    body = question.rstrip("?")
+    # İlk kelime cümle başı olduğu için her hâlükârda büyük harfli, sayılmıyor
+    rest = body.split()[1:]
+    has_anchor = any(char.isdigit() for char in body) or any(
+        word.strip("\"'“”(),.").istitle() or word.isupper() for word in rest
+    )
+    return not has_anchor
+
+
 def quality_flags(question: str) -> list[str]:
     """Name the things a human reviewer should look at before accepting a question."""
     flags = []
@@ -191,6 +231,8 @@ def quality_flags(question: str) -> list[str]:
         flags.append("very-short")
     if _LATIN_ONLY.match(question):
         flags.append("maybe-not-turkish")
+    if is_structural_reference(question):
+        flags.append("structural-reference")
     return flags
 
 
