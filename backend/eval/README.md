@@ -180,6 +180,25 @@ python -m eval.run --k 10 --label baseline --per-question
 
 Prints a report and writes `eval/results/<timestamp>-baseline.json`.
 
+### Recall@10 is capped for annotated questions
+
+`eval.annotate` shows the top 10 hits and you pick the relevant ones from
+that list. Every chunk it records is therefore already inside the top 10 by
+construction, so **Recall@10 is 1.000 for those questions no matter how
+retrieval behaves**. It measures the annotation procedure, not the system.
+
+Two consequences when comparing runs:
+
+- Judge changes on **Recall@1, Recall@3, Recall@5 and MRR@10**. Those measure
+  ordering inside the top 10, which annotation did not fix.
+- The golden set is also missing the questions that had no answer in the top
+  10 at all — they are in `known_gaps.md`. So the set is easier than the real
+  workload, and absolute numbers read better than they should.
+
+Retrieval changes that pull a relevant chunk in from rank 11+ cannot show up
+here at all. To measure that, annotate a sample at a larger `--k`, or check
+`known_gaps.md` by hand after the change.
+
 **4. Change retrieval, then measure again**
 
 ```bash

@@ -1,0 +1,744 @@
+{
+  "timestamp": "2026-08-18T17:27:18+00:00",
+  "label": "baseline-v2-manual",
+  "dataset": "eval\\dataset.jsonl",
+  "db": "data\\kobi_rag.db",
+  "k": 10,
+  "question_count": 30,
+  "chunk_count": 9258,
+  "missing_chunk_ids": [],
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "metrics": {
+    "recall@1": 0.1333,
+    "recall@3": 0.4778,
+    "recall@5": 0.7722,
+    "recall@10": 1.0,
+    "mrr@10": 0.5264,
+    "latency_ms_avg": 35.72,
+    "latency_ms_p95": 41.36
+  },
+  "per_question": [
+    {
+      "id": "q001",
+      "question": "C-MAPSS veri seti kaç alt kümeye ayrılmıştır ve bunlar hangi çalışma koşullarına sahiptir?",
+      "relevant_chunk_ids": [
+        13
+      ],
+      "retrieved_ids": [
+        23,
+        2,
+        13,
+        2108,
+        2126,
+        1896,
+        10,
+        8,
+        2256,
+        1710
+      ],
+      "rank": 3,
+      "reciprocal_rank": 0.3333,
+      "latency_ms": 38.2,
+      "top_source": "turbofan_paper_v10.pdf"
+    },
+    {
+      "id": "q002",
+      "question": "Bu çalışmada hangi makine öğrenmesi regresyon yöntemleri karşılaştırılmıştır?",
+      "relevant_chunk_ids": [
+        3
+      ],
+      "retrieved_ids": [
+        17,
+        10,
+        9,
+        2,
+        3,
+        23,
+        21,
+        11,
+        22,
+        5506
+      ],
+      "rank": 5,
+      "reciprocal_rank": 0.2,
+      "latency_ms": 33.37,
+      "top_source": "turbofan_paper_v10.pdf"
+    },
+    {
+      "id": "q003",
+      "question": "Sıfıra yakın varyansa sahip kaç sensör veri setinden çıkarılmıştır?",
+      "relevant_chunk_ids": [
+        15
+      ],
+      "retrieved_ids": [
+        1583,
+        15,
+        2464,
+        1896,
+        8728,
+        1552,
+        2839,
+        5530,
+        1662,
+        2835
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 37.09,
+      "top_source": "kvkk-orneklerle-rehber.pdf"
+    },
+    {
+      "id": "q004",
+      "question": "Model performansı hangi değerlendirme metrikleriyle ölçülmüştür?",
+      "relevant_chunk_ids": [
+        21,
+        22
+      ],
+      "retrieved_ids": [
+        21,
+        23,
+        22,
+        3,
+        36,
+        11,
+        17,
+        5506,
+        9090,
+        16
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 47.43,
+      "top_source": "turbofan_paper_v10.pdf"
+    },
+    {
+      "id": "q005",
+      "question": "FD002 alt kümesinde eğitim için kaç motor bulunmaktadır?",
+      "relevant_chunk_ids": [
+        14
+      ],
+      "retrieved_ids": [
+        8,
+        13,
+        42,
+        34,
+        14,
+        1,
+        5,
+        44,
+        15,
+        16
+      ],
+      "rank": 5,
+      "reciprocal_rank": 0.2,
+      "latency_ms": 42.44,
+      "top_source": "turbofan_paper_v10.pdf"
+    },
+    {
+      "id": "man001",
+      "question": "işten çıkardığım işçi dava açmak isterse ne kadar süresi var",
+      "relevant_chunk_ids": [
+        893
+      ],
+      "retrieved_ids": [
+        532,
+        1088,
+        878,
+        893,
+        3796,
+        1299,
+        955,
+        897,
+        957,
+        824
+      ],
+      "rank": 4,
+      "reciprocal_rank": 0.25,
+      "latency_ms": 40.05,
+      "top_source": "borclar-kanunu.pdf"
+    },
+    {
+      "id": "man002",
+      "question": "yeni işe aldığım birine en fazla ne kadar deneme süresi verebilirim",
+      "relevant_chunk_ids": [
+        878
+      ],
+      "retrieved_ids": [
+        924,
+        878,
+        883,
+        1488,
+        983,
+        882,
+        4075,
+        2025,
+        1370,
+        955
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 31.52,
+      "top_source": "is-kanunu.pdf"
+    },
+    {
+      "id": "man003",
+      "question": "çalışanın yıllık izin günü kaç yıl çalıştığına göre nasıl değişiyor",
+      "relevant_chunk_ids": [
+        511,
+        506,
+        1008
+      ],
+      "retrieved_ids": [
+        1008,
+        1010,
+        882,
+        511,
+        982,
+        955,
+        870,
+        1032,
+        506,
+        874
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 31.67,
+      "top_source": "is-kanunu.pdf"
+    },
+    {
+      "id": "man005",
+      "question": "doğum yapan çalışanım ne kadar izin kullanabilir",
+      "relevant_chunk_ids": [
+        1069,
+        1062,
+        1158
+      ],
+      "retrieved_ids": [
+        1069,
+        3118,
+        506,
+        1158,
+        1062,
+        1066,
+        1026,
+        3820,
+        511,
+        1232
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 34.22,
+      "top_source": "is-kanunu.pdf"
+    },
+    {
+      "id": "man008",
+      "question": "iş kazası olursa nereye ve kaç gün içinde bildirmem lazım",
+      "relevant_chunk_ids": [
+        3083,
+        3084
+      ],
+      "retrieved_ids": [
+        3083,
+        3084,
+        1255,
+        7266,
+        6841,
+        1299,
+        890,
+        2690,
+        1343,
+        1342
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 37.66,
+      "top_source": "sosyal-sigortalar-kanunu.pdf"
+    },
+    {
+      "id": "man010",
+      "question": "az tehlikeli sınıfta yer alan bir işyeri neye göre belirleniyor",
+      "relevant_chunk_ids": [
+        1243
+      ],
+      "retrieved_ids": [
+        1336,
+        1235,
+        1259,
+        1243,
+        1215,
+        1209,
+        1248,
+        1267,
+        1288,
+        1301
+      ],
+      "rank": 4,
+      "reciprocal_rank": 0.25,
+      "latency_ms": 38.2,
+      "top_source": "isg-kanunu.pdf"
+    },
+    {
+      "id": "man011",
+      "question": "acil durum planı hazırlamak zorunda mıyım",
+      "relevant_chunk_ids": [
+        1246,
+        1247
+      ],
+      "retrieved_ids": [
+        1246,
+        1247,
+        3584,
+        1342,
+        1249,
+        2468,
+        1230,
+        3631,
+        2674,
+        4473
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 37.68,
+      "top_source": "isg-kanunu.pdf"
+    },
+    {
+      "id": "man012",
+      "question": "müşteri bilgilerimi yurt dışındaki bir sunucuda tutabilir miyim",
+      "relevant_chunk_ids": [
+        1978,
+        1413,
+        1402,
+        1403
+      ],
+      "retrieved_ids": [
+        8107,
+        1413,
+        1978,
+        8386,
+        5131,
+        3681,
+        5394,
+        1402,
+        1649,
+        1403
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 36.92,
+      "top_source": "vergi-usul-kanunu.pdf"
+    },
+    {
+      "id": "man013",
+      "question": "VERBİS'e kayıt olmak zorunda mıyım",
+      "relevant_chunk_ids": [
+        2123,
+        2124
+      ],
+      "retrieved_ids": [
+        3012,
+        8373,
+        2124,
+        2123,
+        3358,
+        6963,
+        2019,
+        6598,
+        1646,
+        8359
+      ],
+      "rank": 3,
+      "reciprocal_rank": 0.3333,
+      "latency_ms": 37.61,
+      "top_source": "sosyal-sigortalar-kanunu.pdf"
+    },
+    {
+      "id": "man016",
+      "question": "çalışanların özlük dosyalarını ne kadar süre saklamalıyım",
+      "relevant_chunk_ids": [
+        3808,
+        1894
+      ],
+      "retrieved_ids": [
+        8820,
+        2124,
+        7209,
+        8827,
+        3812,
+        1894,
+        3808,
+        1010,
+        1640,
+        2096
+      ],
+      "rank": 6,
+      "reciprocal_rank": 0.1667,
+      "latency_ms": 38.06,
+      "top_source": "vergi-usul-kanunu.pdf"
+    },
+    {
+      "id": "man017",
+      "question": "müşteri şifrelerini veritabanında nasıl saklamam gerekiyor",
+      "relevant_chunk_ids": [
+        2247,
+        2241,
+        2243
+      ],
+      "retrieved_ids": [
+        2241,
+        2227,
+        2243,
+        8513,
+        1923,
+        2226,
+        1557,
+        1612,
+        2225,
+        2247
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 36.68,
+      "top_source": "kvkk-veri-guvenligi-rehberi.pdf"
+    },
+    {
+      "id": "man018",
+      "question": "kişisel veriyi anonim hale getirmek tam olarak ne demek",
+      "relevant_chunk_ids": [
+        1589,
+        1958,
+        1820,
+        1959,
+        2094,
+        1823
+      ],
+      "retrieved_ids": [
+        1959,
+        2094,
+        1589,
+        1958,
+        1820,
+        1663,
+        1823,
+        1954,
+        1591,
+        1790
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 35.92,
+      "top_source": "kvkk-uygulama-rehberi.pdf"
+    },
+    {
+      "id": "man020",
+      "question": "sattığım ürün bozuk çıktı, müşterinin hangi hakları var",
+      "relevant_chunk_ids": [
+        5008,
+        5173,
+        273
+      ],
+      "retrieved_ids": [
+        260,
+        286,
+        281,
+        273,
+        5121,
+        285,
+        5008,
+        271,
+        275,
+        5173
+      ],
+      "rank": 4,
+      "reciprocal_rank": 0.25,
+      "latency_ms": 38.68,
+      "top_source": "borclar-kanunu.pdf"
+    },
+    {
+      "id": "man021",
+      "question": "internetten satışta müşteri kaç gün içinde cayabilir",
+      "relevant_chunk_ids": [
+        5115
+      ],
+      "retrieved_ids": [
+        5163,
+        5162,
+        5159,
+        5279,
+        5114,
+        5115,
+        7809,
+        5095,
+        5025,
+        5107
+      ],
+      "rank": 6,
+      "reciprocal_rank": 0.1667,
+      "latency_ms": 32.28,
+      "top_source": "tuketicinin-korunmasi.pdf"
+    },
+    {
+      "id": "man022",
+      "question": "garanti belgesi vermek zorunda mıyım",
+      "relevant_chunk_ids": [
+        5172
+      ],
+      "retrieved_ids": [
+        5172,
+        7641,
+        227,
+        7075,
+        176,
+        57,
+        7753,
+        699,
+        6627,
+        6256
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 33.36,
+      "top_source": "tuketicinin-korunmasi.pdf"
+    },
+    {
+      "id": "man023",
+      "question": "taksitli sattığım müşteri ödemeyi aksatırsa ne yapabilirim",
+      "relevant_chunk_ids": [
+        313,
+        336,
+        315
+      ],
+      "retrieved_ids": [
+        278,
+        333,
+        336,
+        315,
+        345,
+        252,
+        313,
+        5051,
+        285,
+        317
+      ],
+      "rank": 3,
+      "reciprocal_rank": 0.3333,
+      "latency_ms": 39.26,
+      "top_source": "borclar-kanunu.pdf"
+    },
+    {
+      "id": "man024",
+      "question": "aboneliğini iptal etmek isteyen müşteriyi ne kadar bekletebilirim",
+      "relevant_chunk_ids": [
+        5159
+      ],
+      "retrieved_ids": [
+        5157,
+        5159,
+        5156,
+        5028,
+        5115,
+        5094,
+        1602,
+        7716,
+        5091,
+        6248
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 38.32,
+      "top_source": "tuketicinin-korunmasi.pdf"
+    },
+    {
+      "id": "man025",
+      "question": "limited şirket kurmak için en az kaç ortak ve ne kadar sermaye gerekiyor",
+      "relevant_chunk_ids": [
+        6388,
+        6389
+      ],
+      "retrieved_ids": [
+        7950,
+        6388,
+        7899,
+        6389,
+        5712,
+        5437,
+        6425,
+        5910,
+        6456,
+        5909
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 36.84,
+      "top_source": "vergi-usul-kanunu.pdf"
+    },
+    {
+      "id": "man026",
+      "question": "ticari defterlerimi kaç yıl saklamak zorundayım",
+      "relevant_chunk_ids": [
+        5531,
+        8508
+      ],
+      "retrieved_ids": [
+        8509,
+        8508,
+        8395,
+        5531,
+        5530,
+        8399,
+        8406,
+        8240,
+        8393,
+        8274
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 38.32,
+      "top_source": "vergi-usul-kanunu.pdf"
+    },
+    {
+      "id": "man031",
+      "question": "prim borcumu geç ödersem ne kadar gecikme cezası uygulanıyor",
+      "relevant_chunk_ids": [
+        3908
+      ],
+      "retrieved_ids": [
+        3856,
+        3893,
+        4432,
+        728,
+        4675,
+        4569,
+        4418,
+        4433,
+        4419,
+        3908
+      ],
+      "rank": 10,
+      "reciprocal_rank": 0.1,
+      "latency_ms": 32.89,
+      "top_source": "sosyal-sigortalar-kanunu.pdf"
+    },
+    {
+      "id": "man033",
+      "question": "fatura ve defterleri kaç yıl saklamak zorundayım",
+      "relevant_chunk_ids": [
+        5531,
+        8508,
+        8509
+      ],
+      "retrieved_ids": [
+        8509,
+        8508,
+        8395,
+        5531,
+        8399,
+        8406,
+        8274,
+        8886,
+        5559,
+        8398
+      ],
+      "rank": 1,
+      "reciprocal_rank": 1.0,
+      "latency_ms": 28.34,
+      "top_source": "vergi-usul-kanunu.pdf"
+    },
+    {
+      "id": "man034",
+      "question": "aldığım makinenin amortismanını nasıl hesaplayacağım",
+      "relevant_chunk_ids": [
+        9089,
+        9090
+      ],
+      "retrieved_ids": [
+        16,
+        9089,
+        2581,
+        2759,
+        9090,
+        34,
+        8554,
+        2814,
+        2430,
+        6943
+      ],
+      "rank": 2,
+      "reciprocal_rank": 0.5,
+      "latency_ms": 28.46,
+      "top_source": "turbofan_paper_v10.pdf"
+    },
+    {
+      "id": "man035",
+      "question": "işyeri kiramı süresinden önce feshedebilir miyim",
+      "relevant_chunk_ids": [
+        421,
+        407
+      ],
+      "retrieved_ids": [
+        379,
+        377,
+        397,
+        421,
+        399,
+        429,
+        380,
+        392,
+        396,
+        407
+      ],
+      "rank": 4,
+      "reciprocal_rank": 0.25,
+      "latency_ms": 30.3,
+      "top_source": "borclar-kanunu.pdf"
+    },
+    {
+      "id": "man036",
+      "question": "işyerimi devredersem kira sözleşmesi yeni sahibe geçer mi",
+      "relevant_chunk_ids": [
+        389
+      ],
+      "retrieved_ids": [
+        379,
+        392,
+        421,
+        405,
+        420,
+        409,
+        380,
+        389,
+        401,
+        399
+      ],
+      "rank": 8,
+      "reciprocal_rank": 0.125,
+      "latency_ms": 30.39,
+      "top_source": "borclar-kanunu.pdf"
+    },
+    {
+      "id": "man039",
+      "question": "dükkanımın önüne kapalı bir bölüm eklersem ruhsat gerekir mi",
+      "relevant_chunk_ids": [
+        2814
+      ],
+      "retrieved_ids": [
+        2561,
+        2643,
+        2814,
+        2515,
+        2623,
+        2333,
+        2396,
+        2355,
+        688,
+        2656
+      ],
+      "rank": 3,
+      "reciprocal_rank": 0.3333,
+      "latency_ms": 29.47,
+      "top_source": "planli-alanlar-imar-yonetmeligi.pdf"
+    }
+  ]
+}
