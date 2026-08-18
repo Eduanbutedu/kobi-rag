@@ -1,0 +1,32 @@
+# Evaluation corpus sources.
+#
+# Format:  URL | slug | kind
+#   slug  -> data/corpus/<slug>.pdf   (lowercase letters, digits and hyphens)
+#   kind  -> mevzuat | rehber
+#
+# Lines starting with # are ignored, as are blank lines.
+#
+# COPYRIGHT
+#   mevzuat : Turkish legislation. Free to reproduce under FSEK art. 31,
+#             so these may be committed to the repository.
+#   rehber  : Guidance publications that remain under copyright. They are
+#             downloaded locally but MUST NOT be committed. data/corpus/ is
+#             gitignored for exactly this reason.
+#
+# Fetch with:  python -m eval.fetch_corpus
+
+# --- Mevzuat (kanun ve yönetmelik metinleri) ---
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.4857.pdf | is-kanunu | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6698.pdf | kvkk-kanunu | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6102.pdf | turk-ticaret-kanunu | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6098.pdf | borclar-kanunu | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6331.pdf | isg-kanunu | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.5510.pdf | sosyal-sigortalar-kanunu | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.6502.pdf | tuketicinin-korunmasi | mevzuat
+https://www.mevzuat.gov.tr/mevzuatmetin/1.5.213.pdf | vergi-usul-kanunu | mevzuat
+https://mevzuat.gov.tr/MevzuatMetin/yonetmelik/7.5.23722.pdf | planli-alanlar-imar-yonetmeligi | mevzuat
+
+# --- Rehber (telifli; indirilir, commit EDİLMEZ) ---
+https://www.kvkk.gov.tr/yayinlar/veri_guvenligi_rehberi.pdf | kvkk-veri-guvenligi-rehberi | rehber
+https://kvkk.gov.tr/SharedFolderServer/CMSFiles/0517c528-a43d-49f5-b1eb-33dc666cb938.pdf | kvkk-uygulama-rehberi | rehber
+https://www.kvkk.gov.tr/SharedFolderServer/CMSFiles/b654ee4e-e329-49a6-9722-03561daac1aa.pdf | kvkk-orneklerle-rehber | rehber

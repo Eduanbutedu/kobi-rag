@@ -219,3 +219,6 @@ __marimo__/
 
 # Eval question drafts: reviewed by hand, then merged into eval/dataset.jsonl
 backend/eval/dataset_draft.jsonl
+
+# Evaluation corpus PDFs: downloaded with eval/fetch_corpus.py, not redistributed
+backend/data/corpus/
