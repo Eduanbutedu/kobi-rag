@@ -42,6 +42,38 @@ def test_search_respects_k(store):
     store.add_document("a.pdf", ["x", "y", "z"], [_vec(1, 0), _vec(0, 1), _vec(1, 1)])
     assert len(store.search(_vec(1, 0), k=2)) == 2
 
+def test_search_returns_chunk_ids(store):
+    store.add_document("a.pdf", ["x", "y"], [_vec(1, 0), _vec(0, 1)])
+    results = store.search(_vec(1, 0), k=2)
+    ids = [r["id"] for r in results]
+    assert sorted(ids) == [1, 2]
+
+
+def test_search_ids_match_stored_text(store):
+    store.add_document("izin.pdf", ["izin metni"], [_vec(1.0, 0.0)])
+    store.add_document("futbol.pdf", ["futbol metni"], [_vec(0.0, 1.0)])
+
+    [top] = store.search(_vec(1.0, 0.0), k=1)
+    by_id = {c["id"]: c["text"] for c in store.all_chunks()}
+
+    assert by_id[top["id"]] == top["text"] == "izin metni"
+
+
+def test_all_chunks_returns_every_chunk_with_source(store):
+    store.add_document("a.pdf", ["x", "y"], [_vec(1, 0), _vec(0, 1)])
+    store.add_document("b.pdf", ["z"], [_vec(1, 1)])
+
+    chunks = store.all_chunks()
+
+    assert [c["id"] for c in chunks] == [1, 2, 3]
+    assert [c["source"] for c in chunks] == ["a.pdf", "a.pdf", "b.pdf"]
+    assert [c["text"] for c in chunks] == ["x", "y", "z"]
+
+
+def test_all_chunks_is_empty_for_new_store(store):
+    assert store.all_chunks() == []
+
+
 def test_list_documents_groups_by_source(store):
     store.add_document("a.pdf", ["x", "y"], [_vec(1, 0), _vec(0, 1)])
     store.add_document("b.pdf", ["z"], [_vec(1, 1)])

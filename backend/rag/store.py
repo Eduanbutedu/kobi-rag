@@ -54,10 +54,10 @@ class DocumentStore:
         return len(chunks)
 
     def search(self, query_vector: list[float], k: int = 3) -> list[dict]:
-        """Return the k most similar chunks: [{text, source, score}, ...]."""
+        """Return the k most similar chunks: [{id, text, source, score}, ...]."""
         rows = self.db.execute(
             """
-            SELECT c.text, c.source, v.distance
+            SELECT c.id, c.text, c.source, v.distance
             FROM vec_chunks AS v
             JOIN chunks AS c ON c.id = v.rowid
             WHERE v.embedding MATCH ? AND v.k = ?
@@ -66,8 +66,8 @@ class DocumentStore:
             (serialize_float32(query_vector), k),
         ).fetchall()
         return [
-            {"text": text, "source": source, "score": round(1 - distance, 4)}
-            for text, source, distance in rows
+            {"id": chunk_id, "text": text, "source": source, "score": round(1 - distance, 4)}
+            for chunk_id, text, source, distance in rows
         ]
 
     def list_documents(self) -> list[dict]:
@@ -76,6 +76,14 @@ class DocumentStore:
             "SELECT source, COUNT(*) FROM chunks GROUP BY source ORDER BY source"
         ).fetchall()
         return [{"source": source, "chunks": count} for source, count in rows]
+
+    def all_chunks(self) -> list[dict]:
+        """Return every stored chunk: [{id, source, text}, ...] ordered by id."""
+        rows = self.db.execute("SELECT id, source, text FROM chunks ORDER BY id").fetchall()
+        return [
+            {"id": chunk_id, "source": source, "text": text}
+            for chunk_id, source, text in rows
+        ]
 
     def delete_document(self, source: str) -> int:
         """Delete all chunks of a document. Returns deleted chunk count."""

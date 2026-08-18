@@ -20,6 +20,10 @@ def ingest_file(store: DocumentStore, file_path: str | Path) -> int:
 
 
 def retrieve(store: DocumentStore, query: str, k: int = 3) -> list[dict]:
-    """Return the k chunks most relevant to the query."""
+    """Return the k chunks most relevant to the query: [{id, text, source, score}, ...].
+
+    This is the single entry point for retrieval: the HTTP layer and the
+    evaluation harness both call it, so they always measure the same code.
+    """
     [query_vector] = embed_texts([query])
     return store.search(query_vector, k=k)
