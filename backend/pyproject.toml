@@ -18,6 +18,8 @@ dependencies = [
 dev = [
     "pytest",
     "ruff",
+    # eval/fetch_corpus.py ve eval/ingest_corpus.py için
+    "requests",
 ]
 
 [tool.ruff]
