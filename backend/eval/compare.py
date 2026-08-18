@@ -13,6 +13,10 @@ METRIC_LABELS: dict[str, tuple[str, bool]] = {
     "recall@3": ("Recall@3", True),
     "recall@5": ("Recall@5", True),
     "recall@10": ("Recall@10", True),
+    "hit@1": ("Hit rate@1", True),
+    "hit@3": ("Hit rate@3", True),
+    "hit@5": ("Hit rate@5", True),
+    "hit@10": ("Hit rate@10", True),
     "latency_ms_avg": ("Latency avg (ms)", False),
     "latency_ms_p95": ("Latency p95 (ms)", False),
 }
@@ -52,16 +56,24 @@ def _format_delta(metric: str, baseline: float | None, candidate: float | None) 
 
 
 def _ordered_metrics(baseline: dict, candidate: dict) -> list[str]:
-    """Metric order: known order first, then any extras, without duplicates."""
-    seen = list(baseline.get("metrics", {})) + list(candidate.get("metrics", {}))
-    known = [m for m in METRIC_LABELS if m in seen]
-    extra = [m for m in dict.fromkeys(seen) if m not in METRIC_LABELS]
-    mrr = [m for m in extra if m.startswith("mrr@")]
-    other = [m for m in extra if not m.startswith("mrr@")]
-    # MRR, recall'lardan hemen sonra ve latency'den önce gelsin
-    recalls = [m for m in known if m.startswith("recall")]
-    latency = [m for m in known if _is_latency(m)]
-    return recalls + mrr + latency + other
+    """Recalls, then hit rates, then MRR, then latency, then anything unknown.
+
+    Grouped by name rather than by membership of METRIC_LABELS, so a metric
+    added to the runner shows up in the table whether or not it has a label
+    here.
+    """
+    seen = list(
+        dict.fromkeys(list(baseline.get("metrics", {})) + list(candidate.get("metrics", {})))
+    )
+    ordered: list[str] = []
+    for belongs in (
+        lambda m: m.startswith("recall"),
+        lambda m: m.startswith("hit"),
+        lambda m: m.startswith("mrr"),
+        _is_latency,
+    ):
+        ordered += [m for m in seen if belongs(m) and m not in ordered]
+    return ordered + [m for m in seen if m not in ordered]
 
 
 def comparison_warnings(baseline: dict, candidate: dict) -> list[str]:

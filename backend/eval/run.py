@@ -1,4 +1,4 @@
-"""Run the retrieval golden set and report Recall@k, MRR and latency.
+"""Run the retrieval golden set and report Recall@k, hit rate, MRR and latency.
 
 Calls rag.service.retrieve() directly, so the measured path is exactly the
 one the API serves -- no HTTP layer in between.
@@ -14,7 +14,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from eval.dataset import EvalCase, load_dataset
-from eval.metrics import first_relevant_rank, mean, percentile, recall_at_k, reciprocal_rank_at_k
+from eval.metrics import (
+    first_relevant_rank,
+    hit_rate_at_k,
+    mean,
+    percentile,
+    recall_at_k,
+    reciprocal_rank_at_k,
+)
 from rag.service import retrieve
 from rag.store import DocumentStore
 
@@ -47,13 +54,19 @@ def evaluate_case(store: DocumentStore, case: EvalCase, k: int) -> dict:
 def aggregate(records: list[dict], k: int) -> dict:
     """Average the per-question records into the reported metric set."""
     metrics: dict[str, float] = {}
-    for cutoff in RECALL_CUTOFFS:
-        if cutoff > k:
-            continue
+    cutoffs = [c for c in RECALL_CUTOFFS if c <= k]
+    for cutoff in cutoffs:
         recalls = [
             recall_at_k(r["retrieved_ids"], r["relevant_chunk_ids"], cutoff) for r in records
         ]
         metrics[f"recall@{cutoff}"] = round(mean(recalls), 4)
+
+    # Hit rate, recall'ın aksine kaç chunk işaretlendiğine bağlı değil
+    for cutoff in cutoffs:
+        hits = [
+            hit_rate_at_k(r["retrieved_ids"], r["relevant_chunk_ids"], cutoff) for r in records
+        ]
+        metrics[f"hit@{cutoff}"] = round(mean(hits), 4)
 
     metrics[f"mrr@{k}"] = round(mean([r["reciprocal_rank"] for r in records]), 4)
 

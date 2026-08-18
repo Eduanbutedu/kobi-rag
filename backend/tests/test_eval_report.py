@@ -35,6 +35,47 @@ def test_aggregate_skips_cutoffs_above_k():
     assert "recall@3" in metrics
     assert "recall@5" not in metrics
     assert "recall@10" not in metrics
+    assert "hit@3" in metrics
+    assert "hit@5" not in metrics
+
+
+def test_aggregate_reports_hit_rate_at_every_cutoff():
+    metrics = aggregate([_record([7, 1, 2], [7], 1.0)], k=10)
+    assert [name for name in metrics if name.startswith("hit@")] == [
+        "hit@1",
+        "hit@3",
+        "hit@5",
+        "hit@10",
+    ]
+
+
+def test_hit_rate_is_not_dragged_down_by_multi_chunk_questions():
+    # İki ilgili chunk'tan yalnızca biri 1. sırada: recall 0.5, hit rate 1.0
+    records = [_record([21, 1, 2], [21, 22], 1.0)]
+    metrics = aggregate(records, k=3)
+    assert metrics["recall@1"] == 0.5
+    assert metrics["hit@1"] == 1.0
+
+
+def test_hit_rate_averages_across_questions():
+    records = [
+        _record([7, 1, 2], [7], 1.0),  # isabet
+        _record([1, 2, 3], [9], 0.0),  # isabet yok
+    ]
+    metrics = aggregate(records, k=3)
+    assert metrics["hit@1"] == 0.5
+    assert metrics["hit@3"] == 0.5
+
+
+def test_hit_rate_never_falls_below_recall_in_aggregate():
+    records = [
+        _record([21, 1, 2], [21, 22], 1.0),
+        _record([1, 2, 3], [9], 0.0),
+        _record([5, 6, 7], [7], 1 / 3),
+    ]
+    metrics = aggregate(records, k=10)
+    for cutoff in (1, 3, 5, 10):
+        assert metrics[f"hit@{cutoff}"] >= metrics[f"recall@{cutoff}"]
 
 
 def test_aggregate_reports_partial_recall_for_multi_chunk_answers():
@@ -115,6 +156,25 @@ def test_markdown_handles_metric_missing_from_one_run():
 def test_markdown_orders_recall_then_mrr_then_latency():
     md = build_markdown(BASELINE, CANDIDATE, "a", "b")
     assert md.index("Recall@1") < md.index("MRR@10") < md.index("Latency avg")
+
+
+def test_markdown_places_hit_rate_between_recall_and_mrr():
+    with_hits = {
+        **BASELINE,
+        "metrics": {**BASELINE["metrics"], "hit@1": 0.5, "hit@5": 0.9},
+    }
+    md = build_markdown(with_hits, with_hits, "a", "b")
+
+    assert "| Hit rate@1 | 0.500 | 0.500 |" in md
+    assert md.index("Recall@1") < md.index("Hit rate@1") < md.index("MRR@10")
+    assert md.index("Hit rate@5") < md.index("Latency avg")
+
+
+def test_a_metric_with_no_label_still_appears():
+    # Runner'a yeni bir ölçüm eklendiğinde tabloda kaybolmamalı
+    extended = {**BASELINE, "metrics": {**BASELINE["metrics"], "ndcg@10": 0.42}}
+    md = build_markdown(extended, extended, "a", "b")
+    assert "ndcg@10" in md
 
 
 def test_comparable_runs_produce_no_warning():

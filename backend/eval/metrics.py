@@ -43,6 +43,18 @@ def first_relevant_rank(
     return None
 
 
+def hit_rate_at_k(retrieved_ids: Sequence[int], relevant_ids: Iterable[int], k: int) -> float:
+    """1.0 if any relevant chunk appears in the top k, 0.0 otherwise.
+
+    Unlike recall, this does not care how many relevant chunks were marked.
+    Recall for a question with three relevant chunks cannot exceed 0.333 at
+    k=1, so a set with many multi-chunk questions reads low for reasons that
+    have nothing to do with retrieval. This answers the plainer question of
+    whether the user was shown something useful at all.
+    """
+    return 1.0 if first_relevant_rank(retrieved_ids, relevant_ids, k) is not None else 0.0
+
+
 def reciprocal_rank_at_k(
     retrieved_ids: Sequence[int], relevant_ids: Iterable[int], k: int
 ) -> float:
