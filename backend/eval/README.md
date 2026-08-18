@@ -180,24 +180,43 @@ python -m eval.run --k 10 --label baseline --per-question
 
 Prints a report and writes `eval/results/<timestamp>-baseline.json`.
 
-### Recall@10 is capped for annotated questions
+### The golden set has three kinds of question, and they behave differently
 
-`eval.annotate` shows the top 10 hits and you pick the relevant ones from
-that list. Every chunk it records is therefore already inside the top 10 by
-construction, so **Recall@10 is 1.000 for those questions no matter how
-retrieval behaves**. It measures the annotation procedure, not the system.
+The `id` prefix records where a question's chunk ids came from, and that
+determines how its numbers should be read:
 
-Two consequences when comparing runs:
+| Prefix | n | Origin | Recall@10 |
+| --- | ---: | --- | --- |
+| `q*` | 5 | chunks picked by reading the store | genuine |
+| `man*` | 25 | hand-written, ids chosen from the top 10 by `eval.annotate` | **capped at 1.000** |
+| `gen*` | 29 | model-drafted from one chunk, that chunk marked relevant | genuine |
 
-- Judge changes on **Recall@1, Recall@3, Recall@5 and MRR@10**. Those measure
-  ordering inside the top 10, which annotation did not fix.
-- The golden set is also missing the questions that had no answer in the top
-  10 at all — they are in `known_gaps.md`. So the set is easier than the real
-  workload, and absolute numbers read better than they should.
+**`man*` questions cannot fail Recall@10.** The annotator shows the top 10
+and you pick from that list, so the answer is inside the top 10 by
+construction. For those rows Recall@10 measures the annotation procedure, not
+retrieval. The questions that had no answer there were left out of the golden
+set entirely and live in `known_gaps.md`.
 
-Retrieval changes that pull a relevant chunk in from rank 11+ cannot show up
-here at all. To measure that, annotate a sample at a larger `--k`, or check
-`known_gaps.md` by hand after the change.
+**`gen*` questions are much easier than the others.** The question was written
+from the chunk, so the two share vocabulary. Measured on the baseline:
+
+| Subset | Recall@1 | MRR@10 |
+| --- | ---: | ---: |
+| `man*` (real user wording) | 0.140 | 0.542 |
+| `gen*` (document wording) | 0.638 | 0.734 |
+
+The aggregate is a blend of the two and moves when the mix changes. When
+comparing runs, look at the `man*` subset as well as the total — it is the
+one that resembles what a user actually types.
+
+### Recall@1 is capped by how many chunks you marked relevant
+
+Recall counts the share of relevant chunks found, so a question with three
+relevant chunks can score at most 0.333 at k=1. Nineteen of the 59 questions
+have more than one, and they average 0.184 at Recall@1 against 0.475 for
+single-chunk questions. This is fair for comparing two runs over the same
+dataset, but do not read aggregate Recall@1 as "how often the right answer
+came first".
 
 **4. Change retrieval, then measure again**
 
