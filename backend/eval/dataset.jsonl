@@ -1,0 +1,5 @@
+{"id": "q001", "question": "C-MAPSS veri seti kaç alt kümeye ayrılmıştır ve bunlar hangi çalışma koşullarına sahiptir?", "relevant_chunk_ids": [13], "note": "FD001-FD004; tek koşul ve altı koşul ayrımı."}
+{"id": "q002", "question": "Bu çalışmada hangi makine öğrenmesi regresyon yöntemleri karşılaştırılmıştır?", "relevant_chunk_ids": [3], "note": "Sekiz yöntem tek bir chunk'ta listeleniyor."}
+{"id": "q003", "question": "Sıfıra yakın varyansa sahip kaç sensör veri setinden çıkarılmıştır?", "relevant_chunk_ids": [15], "note": "Yedi sensör çıkarılıp 17 öznitelik kalıyor; sayısal detay sorusu."}
+{"id": "q004", "question": "Model performansı hangi değerlendirme metrikleriyle ölçülmüştür?", "relevant_chunk_ids": [21, 22], "note": "R, RMSE, MAE ve R² iki ardışık chunk'a yayılmış."}
+{"id": "q005", "question": "FD002 alt kümesinde eğitim için kaç motor bulunmaktadır?", "relevant_chunk_ids": [14], "note": "Tablo içinden bilgi çekme; retrieval için zor bir örnek."}
