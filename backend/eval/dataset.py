@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -12,20 +12,30 @@ class DatasetError(ValueError):
 
 @dataclass(frozen=True)
 class EvalCase:
-    """One golden-set row: a question and the chunks that should answer it."""
+    """One golden-set row: a question and the chunks that should answer it.
+
+    `extras` carries review-only annotations written into drafts, such as the
+    source document and a text preview. They are written out but never read
+    back: the loader ignores any field it does not know, so a draft row can be
+    pasted into the golden set as-is.
+    """
 
     id: str
     question: str
     relevant_chunk_ids: list[int]
     note: str = ""
+    extras: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
-        return {
+        row = {
             "id": self.id,
             "question": self.question,
             "relevant_chunk_ids": list(self.relevant_chunk_ids),
             "note": self.note,
         }
+        # Ek alanlar zorunlu alanların üzerine yazamaz
+        row.update({k: v for k, v in self.extras.items() if k not in row})
+        return row
 
 
 def _fail(line_number: int, message: str) -> None:

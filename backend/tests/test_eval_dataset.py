@@ -78,6 +78,33 @@ def test_malformed_rows_raise(tmp_path, row):
         load_dataset(_write(tmp_path, row))
 
 
+def test_loader_ignores_draft_only_fields(tmp_path):
+    # Taslak satırı olduğu gibi altın sete yapıştırılabilmeli
+    row = (
+        '{"id": "q1", "question": "Yıllık izin kaç gün?", "relevant_chunk_ids": [4], '
+        '"source": "is-kanunu.pdf", "chunk_preview": "İşveren...", '
+        '"candidate_chunk_ids": [4, 9], "candidates": [{"id": 9}]}'
+    )
+    [case] = load_dataset(_write(tmp_path, row))
+
+    assert case.relevant_chunk_ids == [4]
+    assert case.extras == {}
+
+
+def test_extras_are_written_but_never_override_required_fields(tmp_path):
+    case = EvalCase(
+        "q1",
+        "Soru?",
+        [4],
+        extras={"source": "a.pdf", "id": "SAHTE", "relevant_chunk_ids": [999]},
+    )
+    row = case.to_dict()
+
+    assert row["id"] == "q1"
+    assert row["relevant_chunk_ids"] == [4]
+    assert row["source"] == "a.pdf"
+
+
 def test_write_then_load_round_trips(tmp_path):
     path = tmp_path / "out.jsonl"
     cases = [

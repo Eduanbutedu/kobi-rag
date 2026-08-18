@@ -14,19 +14,31 @@ import argparse
 import random
 import re
 import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 
+from eval.chunk_filter import boilerplate_reasons
 from eval.dataset import EvalCase, write_dataset
 from rag.llm import complete
+from rag.service import retrieve
 from rag.store import DocumentStore
 
 DEFAULT_DB = Path("data/kobi_rag.db")
 DEFAULT_OUTPUT = Path("eval/dataset_draft.jsonl")
 PROTECTED_OUTPUT = "dataset.jsonl"
 MIN_CHUNK_CHARS = 200
+# Taslakta gösterilecek aday chunk sayısı ve önizleme uzunluğu
+CANDIDATE_K = 5
+PREVIEW_CHARS = 200
 
+# Mevzuat metinlerinde model, soru yazmak yerine parçayı düzyazı olarak tekrar
+# etmeye eğilimli. "?" şartı ve hukuk metninden örnekler bunu belirgin biçimde
+# azaltıyor: 16 chunk'lık ölçümde kullanılabilir çıktı 9'dan 13'e çıktı.
 SYSTEM_PROMPT = """Sen bir arama sistemi için değerlendirme verisi hazırlayan asistansın.
 Sana bir doküman parçası verilecek. Görevin, bu parçanın cevapladığı TEK bir Türkçe soru yazmak.
+
+EN ÖNEMLİ KURAL: Çıktın bir SORU olmalı ve mutlaka "?" ile bitmeli.
+Parçayı özetleme, tekrarlama veya cevabı yazma. Yalnızca soruyu yaz.
 
 Kurallar:
 - Soru, yalnızca bu parçadaki bilgiyle cevaplanabilmeli.
@@ -37,8 +49,18 @@ Kurallar:
 - Soruyu Türkçe yaz; İngilizce kelime kullanma (teknik terimlerin özel adları hariç).
 - SADECE soruyu yaz. Açıklama, numara, tırnak veya başka hiçbir şey ekleme.
 
-Örnek parça: "FD002 alt kümesi 6 farklı çalışma koşulu içerir ve eğitim için 260 motor barındırır."
-Örnek soru: FD002 alt kümesinde eğitim için kaç motor bulunmaktadır?"""
+Örnek parça 1: "FD002 alt kümesi 6 farklı çalışma koşulu içerir ve eğitim için 260 motor \
+barındırır."
+Örnek soru 1: FD002 alt kümesinde eğitim için kaç motor bulunmaktadır?
+
+Örnek parça 2: "İşveren, işçinin yıllık ücretli izin hakkını iş sözleşmesinin devamı \
+süresince kullandırmak zorundadır. Bu haktan vazgeçilemez."
+Örnek soru 2: İşveren yıllık ücretli izin hakkını ne zaman kullandırmak zorundadır?
+
+Örnek parça 3: "Mülki idare amiri, 5442 sayılı İl İdaresi Kanununun verdiği yetkiler \
+çerçevesinde talebi uygun bulursa yeteri kadar kolluk kuvveti görevlendirir."
+Örnek soru 3: Mülki idare amiri talebi uygun bulduğunda hangi yetkiye dayanarak kolluk \
+kuvveti görevlendirir?"""
 
 # Modelin sık ürettiği "Bu metinde, ..." kalıbı; soruyu bozmadan sökülebiliyor
 # Uzun varyantlar önce gelmeli, yoksa "parçada" içindeki "parça" eşleşip "da" artıyor
@@ -62,7 +84,8 @@ _LATIN_ONLY = re.compile(r"^[\x00-\x7f]+$")
 def build_prompt(chunk_text: str) -> str:
     return (
         f"Doküman parçası:\n\n{chunk_text}\n\n"
-        "Bu parçanın cevapladığı tek bir soru yaz. /no_think"
+        "Bu parçanın cevapladığı tek bir soru yaz. Çıktın yalnızca soru cümlesi olsun "
+        've "?" ile bitsin. /no_think'
     )
 
 
@@ -105,18 +128,127 @@ def quality_flags(question: str) -> list[str]:
     return flags
 
 
-def select_chunks(chunks: list[dict], count: int, seed: int, min_chars: int) -> list[dict]:
-    """Randomly pick up to `count` chunks that are long enough to hold a fact."""
-    usable = [c for c in chunks if len(c["text"].strip()) >= min_chars]
+def partition_chunks(chunks: list[dict], min_chars: int) -> tuple[list[dict], Counter]:
+    """Split chunks into usable ones and a tally of why the rest were dropped."""
+    usable: list[dict] = []
+    dropped: Counter = Counter()
+    for chunk in chunks:
+        if len(chunk["text"].strip()) < min_chars:
+            dropped["too-short"] += 1
+            continue
+        reasons = boilerplate_reasons(chunk["text"])
+        if reasons:
+            dropped.update(reasons)
+            dropped["_total"] += 1
+            continue
+        usable.append(chunk)
+    return usable, dropped
+
+
+def select_chunks(
+    chunks: list[dict],
+    count: int,
+    seed: int,
+    min_chars: int,
+    per_document: int | None = None,
+) -> list[dict]:
+    """Pick chunks evenly across documents, skipping boilerplate.
+
+    Sampling at random would follow document size, and the two largest laws
+    are half the corpus. Instead each document is drawn from in turn, so a
+    small law is represented as well as a large one. A document that runs out
+    of usable chunks simply drops out and the rest take up its share.
+
+    With `per_document` set, that number is a hard quota per document and no
+    redistribution happens.
+    """
+    usable, _ = partition_chunks(chunks, min_chars)
     if not usable:
         raise SystemExit(
-            f"No chunk is at least {min_chars} characters long. "
-            "Lower --min-chars or ingest longer documents."
+            f"No chunk is at least {min_chars} characters long and free of boilerplate. "
+            "Lower --min-chars or ingest more documents."
         )
-    return random.Random(seed).sample(usable, min(count, len(usable)))
+
+    rng = random.Random(seed)
+    pools: dict[str, list[dict]] = defaultdict(list)
+    for chunk in usable:
+        pools[chunk["source"]].append(chunk)
+    # Kaynak sırası ve her havuzun karışımı seed'e bağlı, yani tekrarlanabilir
+    sources = sorted(pools)
+    for source in sources:
+        rng.shuffle(pools[source])
+
+    if per_document is not None:
+        return [chunk for source in sources for chunk in pools[source][:per_document]]
+
+    selected: list[dict] = []
+    positions = dict.fromkeys(sources, 0)
+    while len(selected) < count:
+        progressed = False
+        for source in sources:
+            if len(selected) >= count:
+                break
+            index = positions[source]
+            if index < len(pools[source]):
+                selected.append(pools[source][index])
+                positions[source] += 1
+                progressed = True
+        if not progressed:
+            break
+    return selected
 
 
-def generate_case(chunk: dict, index: int) -> EvalCase | None:
+def format_filter_report(total: int, usable: list[dict], dropped: Counter) -> str:
+    """Show how many chunks the filter removed and why."""
+    boilerplate = dropped.get("_total", 0)
+    too_short = dropped.get("too-short", 0)
+    lines = [
+        "",
+        f"{total} chunk(s) in the store:",
+        f"  {too_short:>6} too short (< min-chars)",
+        f"  {boilerplate:>6} boilerplate",
+    ]
+    reasons = [(name, n) for name, n in dropped.most_common() if not name.startswith("_")]
+    lines += [
+        f"         {n:>5}  {name}" for name, n in reasons if name != "too-short"
+    ]
+    lines.append(f"  {len(usable):>6} usable")
+    return "\n".join(lines)
+
+
+def format_selection(selected: list[dict]) -> str:
+    """Show how the sample spread across documents."""
+    per_source = Counter(chunk["source"] for chunk in selected)
+    lines = ["", f"Sampled {len(selected)} chunk(s) across {len(per_source)} document(s):"]
+    lines += [f"  {n:>4}  {source}" for source, n in sorted(per_source.items())]
+    return "\n".join(lines)
+
+
+def preview_of(text: str, limit: int = PREVIEW_CHARS) -> str:
+    """Collapse a chunk to a single readable line for the reviewer."""
+    collapsed = " ".join(text.split())
+    return collapsed[:limit]
+
+
+def candidate_annotations(store: DocumentStore, question: str, k: int = CANDIDATE_K) -> dict:
+    """Run the question through retrieval so the reviewer can widen the answer set.
+
+    A question about legislation is often answered by several articles, and
+    marking only the source chunk as relevant understates Recall@1. These are
+    suggestions to check by hand -- they are never added to
+    relevant_chunk_ids automatically.
+    """
+    hits = retrieve(store, question, k=k)
+    return {
+        "candidate_chunk_ids": [hit["id"] for hit in hits],
+        "candidates": [
+            {"id": hit["id"], "source": hit["source"], "preview": preview_of(hit["text"], 120)}
+            for hit in hits
+        ],
+    }
+
+
+def generate_case(chunk: dict, index: int, store: DocumentStore | None = None) -> EvalCase | None:
     """Ask the model for one question about this chunk. None if it gave nothing usable."""
     reply = complete(SYSTEM_PROMPT, build_prompt(chunk["text"]), temperature=0.4, max_tokens=120)
     question = clean_question(reply)
@@ -126,11 +258,17 @@ def generate_case(chunk: dict, index: int) -> EvalCase | None:
     note = f"AUTO-DRAFT, review before use | source={chunk['source']} | chunk_id={chunk['id']}"
     if flags:
         note += f" | CHECK: {', '.join(flags)}"
+
+    extras = {"source": chunk["source"], "chunk_preview": preview_of(chunk["text"])}
+    if store is not None:
+        extras.update(candidate_annotations(store, question))
+
     return EvalCase(
         id=f"gen{index:03d}",
         question=question,
         relevant_chunk_ids=[chunk["id"]],
         note=note,
+        extras=extras,
     )
 
 
@@ -146,10 +284,22 @@ def main() -> None:
         default=MIN_CHUNK_CHARS,
         help="skip chunks shorter than this",
     )
+    parser.add_argument(
+        "--per-document",
+        type=int,
+        help="exact quota per document; overrides --count and disables redistribution",
+    )
+    parser.add_argument(
+        "--no-candidates",
+        action="store_true",
+        help="skip the retrieval pass that suggests further relevant chunks",
+    )
     args = parser.parse_args()
 
     if args.count <= 0:
         parser.error("--count must be positive")
+    if args.per_document is not None and args.per_document <= 0:
+        parser.error("--per-document must be positive")
     if args.out.name == PROTECTED_OUTPUT:
         parser.error(
             f"refusing to write {PROTECTED_OUTPUT}: it is the reviewed golden set. "
@@ -159,27 +309,36 @@ def main() -> None:
     store = DocumentStore(args.db)
     try:
         chunks = store.all_chunks()
-    finally:
-        store.close()
-    if not chunks:
-        raise SystemExit(f"No chunks in {args.db}. Upload documents first.")
+        if not chunks:
+            raise SystemExit(f"No chunks in {args.db}. Upload documents first.")
 
-    selected = select_chunks(chunks, args.count, args.seed, args.min_chars)
-    print(f"Sampled {len(selected)} of {len(chunks)} chunks; generating questions...\n")
+        usable, dropped = partition_chunks(chunks, args.min_chars)
+        print(format_filter_report(len(chunks), usable, dropped))
 
-    cases: list[EvalCase] = []
-    for index, chunk in enumerate(selected, start=1):
-        case = generate_case(chunk, index)
-        if case is None:
+        selected = select_chunks(
+            chunks, args.count, args.seed, args.min_chars, args.per_document
+        )
+        print(format_selection(selected))
+        print("Generating questions...\n")
+
+        cases: list[EvalCase] = []
+        for index, chunk in enumerate(selected, start=1):
+            case = generate_case(chunk, index, None if args.no_candidates else store)
+            if case is None:
+                print(
+                    f"  [{index:>3}/{len(selected)}] chunk {chunk['id']}: "
+                    "no usable question, skipped"
+                )
+                continue
+            cases.append(case)
+            flags = quality_flags(case.question)
+            marker = f"  [CHECK: {', '.join(flags)}]" if flags else ""
             print(
                 f"  [{index:>3}/{len(selected)}] chunk {chunk['id']}: "
-                "no usable question, skipped"
+                f"{case.question[:70]}{marker}"
             )
-            continue
-        cases.append(case)
-        flags = quality_flags(case.question)
-        marker = f"  [CHECK: {', '.join(flags)}]" if flags else ""
-        print(f"  [{index:>3}/{len(selected)}] chunk {chunk['id']}: {case.question[:70]}{marker}")
+    finally:
+        store.close()
 
     if not cases:
         raise SystemExit("\nThe model produced no usable questions; nothing was written.")
