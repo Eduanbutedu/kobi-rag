@@ -139,6 +139,18 @@ def test_quality_flags_catch_short_and_ascii_only_questions():
     assert "maybe-not-turkish" in quality_flags("How many engines are in the FD002 subset?")
 
 
+def test_a_slip_into_another_script_is_flagged():
+    # 80 chunk'lık çalışmadan: model cümlenin ortasında Çinceye kaydı
+    question = "Bu kararın yerine getirilmesi ne zaman ve ne条件下 en geç 30 gün içinde olur?"
+    assert "maybe-not-turkish" in quality_flags(question)
+
+
+def test_turkish_letters_are_not_mistaken_for_another_script():
+    assert "maybe-not-turkish" not in quality_flags(
+        "İşçinin çalışma süresi kaç saattir ve ücreti nasıl ödenir?"
+    )
+
+
 @pytest.mark.parametrize("raw", ["", "   ", "Bu bir cevaptır.", "Kısa?", "Soru yok"])
 def test_clean_question_rejects_unusable_replies(raw):
     assert clean_question(raw) == ""

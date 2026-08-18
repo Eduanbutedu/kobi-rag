@@ -79,6 +79,11 @@ _META_MENTION = re.compile(
 # Türkçe evet/hayır soru eki: "... söylenebilir mi?"
 _YES_NO = re.compile(r"\b(mi|mı|mu|mü)(dir|dır|dur|dür)?\s*\?$", re.IGNORECASE)
 _LATIN_ONLY = re.compile(r"^[\x00-\x7f]+$")
+# Model ara sıra başka bir yazı sistemine kayıyor ("ne条件下 en geç 30 gün")
+_FOREIGN_SCRIPT = re.compile(
+    r"[Ͱ-ϿЀ-ӿ֐-׿؀-ۿ"
+    r"぀-ヿ㐀-䶿一-鿿가-힯]"
+)
 
 # Soru kelimeleri. Ekli biçimler açıkça sayılıyor ve iki yanı da \b ile
 # sınırlanıyor: aksi hâlde "ne" -> "nedeniyle", "kim" -> "kimyasal",
@@ -229,7 +234,7 @@ def quality_flags(question: str) -> list[str]:
         flags.append("yes-no")
     if len(question) < 25:
         flags.append("very-short")
-    if _LATIN_ONLY.match(question):
+    if _LATIN_ONLY.match(question) or _FOREIGN_SCRIPT.search(question):
         flags.append("maybe-not-turkish")
     if is_structural_reference(question):
         flags.append("structural-reference")
