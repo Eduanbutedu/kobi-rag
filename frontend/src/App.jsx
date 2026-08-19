@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { parseCitations } from "./citations";
+import { relativeTime, sessionLabel, toChatMessages } from "./sessions";
 
 const SUGGESTED_QUESTIONS = [
   "Bu doküman ne hakkında?",
@@ -68,6 +69,11 @@ export default function App() {
   const sourceRefs = useRef({});
   const [highlighted, setHighlighted] = useState(null);
 
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
+  const [loadingSession, setLoadingSession] = useState(false);
+  const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
+
   const focusSource = (messageIndex, sourceIndex) => {
     const key = `${messageIndex}:${sourceIndex}`;
     const card = sourceRefs.current[key];
@@ -88,6 +94,7 @@ export default function App() {
 
   useEffect(() => {
     refreshDocuments();
+    refreshSessions();
   }, []);
 
   useEffect(() => {
@@ -144,12 +151,25 @@ export default function App() {
       });
 
     try {
-      await api.askStream(q, {
-        onSources: (sources) => updateLast((m) => ({ ...m, sources })),
-        onDelta: (piece) =>
-          updateLast((m) => ({ ...m, content: m.content + piece })),
-      });
+      let activeSession = sessionId;
+      await api.askStream(
+        q,
+        {
+          // Oturum ilk soruda sunucuda açılıyor; id metinden önce geliyor
+          onSession: (id) => {
+            activeSession = id;
+            setSessionId(id);
+          },
+          onSources: (sources) => updateLast((m) => ({ ...m, sources })),
+          onDelta: (piece) =>
+            updateLast((m) => ({ ...m, content: m.content + piece })),
+        },
+        3,
+        sessionId
+      );
       updateLast((m) => ({ ...m, streaming: false }));
+      // Başlık arka planda yazılıyor; cevap bitince listeyi tazele
+      if (activeSession) refreshSessions();
     } catch (err) {
       updateLast((m) => ({
         ...m,
@@ -162,9 +182,55 @@ export default function App() {
     }
   }
 
-  function handleClearChat() {
+  async function refreshSessions() {
+    try {
+      const { sessions: rows } = await api.listSessions();
+      setSessions(rows);
+    } catch {
+      // Geçmiş listesi çekilemezse sohbet çalışmaya devam etsin
+    }
+  }
+
+  function handleNewChat() {
     if (asking) return;
+    // Yeni oturum ilk soruda sunucuda açılıyor; burada yalnızca bağ koparılıyor
+    setSessionId(null);
     setMessages([]);
+    setConfirmDeleteSession(null);
+  }
+
+  async function handleOpenSession(id) {
+    if (asking || id === sessionId) return;
+    setLoadingSession(true);
+    setConfirmDeleteSession(null);
+    try {
+      const { messages: stored } = await api.sessionMessages(id);
+      setMessages(toChatMessages(stored));
+      setSessionId(id);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingSession(false);
+    }
+  }
+
+  async function handleDeleteSession(id) {
+    if (confirmDeleteSession !== id) {
+      setConfirmDeleteSession(id);
+      return;
+    }
+    try {
+      await api.deleteSession(id);
+      if (id === sessionId) {
+        setSessionId(null);
+        setMessages([]);
+      }
+      await refreshSessions();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConfirmDeleteSession(null);
+    }
   }
 
   return (
@@ -180,6 +246,68 @@ export default function App() {
             <p className="text-xs text-mist">Yerel doküman asistanı</p>
           </div>
         </div>
+
+        {/* Sohbet geçmişi */}
+        <div className="flex min-h-0 flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">
+              Sohbetler
+            </p>
+            <button
+              onClick={handleNewChat}
+              disabled={asking}
+              className="rounded px-2 py-0.5 text-xs text-brass-400 transition hover:bg-ink-800 disabled:opacity-50"
+            >
+              + Yeni
+            </button>
+          </div>
+
+          {sessions.length === 0 ? (
+            <p className="text-xs text-faint">Henüz sohbet yok.</p>
+          ) : (
+            <div className="flex max-h-56 flex-col gap-1 overflow-y-auto pr-1">
+              {sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`group flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition ${
+                    session.id === sessionId
+                      ? "border-brass-500/70 bg-ink-800/80"
+                      : "border-transparent hover:bg-ink-800/50"
+                  }`}
+                >
+                  <button
+                    onClick={() => handleOpenSession(session.id)}
+                    disabled={asking || loadingSession}
+                    className="min-w-0 flex-1 text-left disabled:opacity-50"
+                  >
+                    <p
+                      className={`truncate text-xs ${
+                        session.id === sessionId ? "text-brass-400" : "text-paper"
+                      }`}
+                    >
+                      {sessionLabel(session)}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-faint">
+                      {relativeTime(session.updated_at)}
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSession(session.id)}
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] transition ${
+                      confirmDeleteSession === session.id
+                        ? "bg-red-950/70 text-red-300"
+                        : "text-faint opacity-0 hover:text-red-300 group-hover:opacity-100"
+                    }`}
+                  >
+                    {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-ink-800" />
 
         <input
           ref={fileInputRef}
@@ -246,7 +374,7 @@ export default function App() {
         {messages.length > 0 && (
           <div className="flex justify-end border-b border-ink-800 px-4 py-2">
             <button
-              onClick={handleClearChat}
+              onClick={handleNewChat}
               disabled={asking}
               className="rounded px-2.5 py-1 text-xs text-faint transition hover:bg-ink-800 hover:text-mist disabled:opacity-50"
             >

@@ -18,17 +18,21 @@ export const api = {
   },
   deleteDocument: (source) =>
     request(`/documents/${encodeURIComponent(source)}`, { method: "DELETE" }),
-  ask: (question, k = 3) =>
+  ask: (question, k = 3, sessionId = null) =>
     request("/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, k }),
+      body: JSON.stringify({ question, k, session_id: sessionId }),
     }),
-  askStream: async (question, { onSources, onDelta }, k = 3) => {
+  listSessions: () => request("/sessions"),
+  createSession: () => request("/sessions", { method: "POST" }),
+  sessionMessages: (id) => request(`/sessions/${id}/messages`),
+  deleteSession: (id) => request(`/sessions/${id}`, { method: "DELETE" }),
+  askStream: async (question, { onSession, onSources, onDelta }, k = 3, sessionId = null) => {
     const res = await fetch(`${BASE}/ask/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, k }),
+      body: JSON.stringify({ question, k, session_id: sessionId }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -50,7 +54,8 @@ export const api = {
           if (line.startsWith("event: ")) event = line.slice(7);
           else if (line.startsWith("data: ")) data += line.slice(6);
         }
-        if (event === "sources") onSources?.(JSON.parse(data));
+        if (event === "session") onSession?.(JSON.parse(data).session_id);
+        else if (event === "sources") onSources?.(JSON.parse(data));
         else if (event === "delta") onDelta?.(JSON.parse(data));
       }
     }
