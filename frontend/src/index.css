@@ -1,19 +1,36 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink-950: #0b1220;
-  --color-ink-900: #121d31;
-  --color-ink-800: #1b2a45;
-  --color-ink-700: #2a3d5e;
-  --color-paper: #efe7d5;
-  --color-mist: #a5aebf;
-  --color-faint: #707b93;
-  --color-brass-600: #b08a3e;
-  --color-brass-500: #c9a050;
-  --color-brass-400: #ddb86a;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px rgb(0 0 0 / 0.35);
-  --shadow-rail: 6px 0 18px rgb(0 0 0 / 0.35);
+  /* Zemin katmanları: en koyu şerit, üstüne panel, en üstte kartlar.
+     Aralarındaki fark bilerek küçük; derinlik renkten değil katmandan geliyor. */
+  --color-surface-950: #08090d;
+  --color-surface-900: #0c0e14;
+  --color-surface-850: #11141c;
+  --color-surface-800: #171b25;
+  --color-surface-700: #232936;
+
+  --color-content: #e7e9ee;
+  --color-muted: #9198a8;
+  --color-subtle: #646b7c;
+
+  /* Vurgu yalnızca aktif durumlar, birincil butonlar ve kullanıcı balonları
+     için. İkon ya da avatar renklendirmesinde kullanılmıyor. */
+  --color-accent-600: #4f46e5;
+  --color-accent-500: #6366f1;
+  --color-accent-400: #818cf8;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-panel: 1px 0 0 rgb(255 255 255 / 0.03), 0 8px 32px rgb(0 0 0 / 0.4);
+  --shadow-rail: 4px 0 16px rgb(0 0 0 / 0.45);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-card-raised: 0 4px 16px rgb(0 0 0 / 0.45);
+}
+
+html {
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
 }
 
 @keyframes blink {
@@ -37,20 +54,17 @@
   animation: rise 150ms ease-out;
 }
 
-/* Marka ve panel başlıkları. WONK ekseni Fraunces'in açılı uçlarını açıyor;
-   ağır ağırlıkla birlikte koyu zeminde ince kalmayan bir arşiv hissi veriyor. */
+/* Marka ve panel başlıkları gövdeyle aynı aileden; ayrım yalnızca ağırlık,
+   boyut ve harf aralığında. */
 .brand {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-variation-settings: "SOFT" 20, "WONK" 1;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .panel-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-variation-settings: "SOFT" 0, "WONK" 0;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -61,9 +75,9 @@
   padding: 0 0.25em;
   margin-left: 1px;
   border-radius: 4px;
-  border: 1px solid var(--color-brass-500);
+  border: 1px solid var(--color-accent-500);
   background: transparent;
-  color: var(--color-brass-400);
+  color: var(--color-accent-400);
   font-size: 0.65em;
   line-height: 1.5;
   vertical-align: super;
@@ -73,8 +87,8 @@
 
 .citation-mark:hover,
 .citation-mark:focus-visible {
-  background: var(--color-brass-500);
-  color: var(--color-ink-900);
+  background: var(--color-accent-500);
+  color: var(--color-surface-850);
   outline: none;
 }
 
@@ -85,7 +99,7 @@
     box-shadow: 0 0 0 0 transparent;
   }
   30% {
-    box-shadow: 0 0 0 3px var(--color-brass-500);
+    box-shadow: 0 0 0 3px var(--color-accent-500);
   }
 }
 
@@ -99,13 +113,13 @@
   height: 1em;
   margin-left: 2px;
   vertical-align: -0.15em;
-  background: var(--color-brass-400);
+  background: var(--color-accent-400);
   animation: blink 1s steps(1) infinite;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-ink-700) transparent;
+  scrollbar-color: var(--color-surface-700) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -113,7 +127,7 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-ink-700);
+  background: var(--color-surface-700);
   border-radius: 4px;
 }
 

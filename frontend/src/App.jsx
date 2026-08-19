@@ -83,35 +83,38 @@ function RailButton({ label, active, onClick, disabled, children }) {
       aria-pressed={active}
       className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-40 ${
         active
-          ? "bg-ink-800 text-brass-400 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
-          : "text-mist hover:bg-ink-800/60 hover:text-paper"
+          ? "bg-surface-800 text-accent-400 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
+          : "text-muted hover:bg-surface-800/60 hover:text-content"
       }`}
     >
       {active && (
-        <span className="absolute -left-3 h-5 w-[3px] rounded-r-full bg-brass-500" />
+        <span className="absolute -left-3 h-5 w-[3px] rounded-r-full bg-accent-500" />
       )}
       {children}
     </button>
   );
 }
 
-function SealLogo({ size = 36 }) {
+/** Abstract monogram: two offset planes reading as a stacked K. */
+function Mark({ size = 34 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <circle cx="32" cy="32" r="29" fill="none" stroke="#C9A050" strokeWidth="3" />
-      <circle
-        cx="32"
-        cy="32"
-        r="22"
-        fill="none"
-        stroke="#EFE7D5"
-        strokeWidth="1"
-        strokeDasharray="3 4"
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect width="40" height="40" rx="11" fill="var(--color-accent-500)" />
+      <path
+        d="M15 11v18"
+        stroke="white"
+        strokeWidth="3"
+        strokeLinecap="round"
+        opacity="0.95"
       />
-      <rect x="24" y="22" width="16" height="20" rx="2" fill="none" stroke="#EFE7D5" strokeWidth="2" />
-      <line x1="27.5" y1="28" x2="36.5" y2="28" stroke="#C9A050" strokeWidth="2" strokeLinecap="round" />
-      <line x1="27.5" y1="32.5" x2="36.5" y2="32.5" stroke="#EFE7D5" strokeWidth="1.6" strokeLinecap="round" />
-      <line x1="27.5" y1="37" x2="33" y2="37" stroke="#EFE7D5" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M27 11 17.5 20 27 29"
+        stroke="white"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.7"
+      />
     </svg>
   );
 }
@@ -301,17 +304,17 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-ink-950 text-paper">
+    <div className="flex h-screen bg-surface-950 text-content">
       {/* Sol şerit — marka ve panel seçimi */}
-      <nav className="z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r border-ink-800 bg-ink-950 py-5 shadow-[var(--shadow-rail)]">
-        <SealLogo size={34} />
+      <nav className="z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r border-surface-800 bg-surface-950 py-5 shadow-[var(--shadow-rail)]">
+        <Mark size={34} />
 
         <button
           onClick={handleNewChat}
           disabled={asking}
           title="Yeni sohbet"
           aria-label="Yeni sohbet"
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-brass-500/40 text-brass-400 transition-all duration-200 hover:border-brass-500 hover:bg-brass-500/10 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-accent-500/40 text-accent-400 transition-all duration-200 hover:border-accent-500 hover:bg-accent-500/10 disabled:opacity-40"
         >
           <IconPlus />
         </button>
@@ -333,18 +336,18 @@ export default function App() {
           </RailButton>
         </div>
 
-        <p className="mt-auto text-[9px] uppercase tracking-[0.2em] text-faint [writing-mode:vertical-rl]">
+        <p className="mt-auto text-[9px] uppercase tracking-[0.2em] text-subtle [writing-mode:vertical-rl]">
           yerel
         </p>
       </nav>
 
       {/* Orta panel — seçili görünümün içeriği */}
-      <aside className="z-10 flex w-[19rem] shrink-0 flex-col border-r border-ink-800 bg-ink-900 shadow-[var(--shadow-panel)]">
-        <header className="flex items-baseline justify-between border-b border-ink-800/80 px-5 py-5">
-          <h2 className="panel-title text-[13px] text-paper">
+      <aside className="z-10 flex w-[19rem] shrink-0 flex-col border-r border-surface-800 bg-surface-850 shadow-[var(--shadow-panel)]">
+        <header className="flex items-baseline justify-between border-b border-surface-800/80 px-5 py-5">
+          <h2 className="panel-title text-[13px] text-content">
             {panel === "chats" ? "Sohbetler" : "Dokümanlar"}
           </h2>
-          <span className="text-[11px] text-faint">
+          <span className="text-[11px] text-subtle">
             {panel === "chats" ? sessions.length : documents.length}
           </span>
         </header>
@@ -358,7 +361,7 @@ export default function App() {
         {panel === "chats" ? (
           <div className="flex-1 overflow-y-auto px-3 py-4">
             {sessions.length === 0 ? (
-              <p className="px-2 text-xs leading-relaxed text-faint">
+              <p className="px-2 text-xs leading-relaxed text-subtle">
                 Henüz sohbet yok. Bir soru sorduğunuzda burada birikir.
               </p>
             ) : (
@@ -368,12 +371,12 @@ export default function App() {
                     <div
                       className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-all duration-200 ${
                         session.id === sessionId
-                          ? "border-brass-500/50 bg-ink-800 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]"
-                          : "border-transparent hover:border-ink-700/70 hover:bg-ink-800/50"
+                          ? "border-accent-500/50 bg-surface-800 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]"
+                          : "border-transparent hover:border-surface-700/70 hover:bg-surface-800/50"
                       }`}
                     >
                       {session.id === sessionId && (
-                        <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-brass-500" />
+                        <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-accent-500" />
                       )}
                       <button
                         onClick={() => handleOpenSession(session.id)}
@@ -382,12 +385,12 @@ export default function App() {
                       >
                         <p
                           className={`truncate text-[13px] font-medium leading-snug ${
-                            session.id === sessionId ? "text-brass-400" : "text-paper"
+                            session.id === sessionId ? "text-accent-400" : "text-content"
                           }`}
                         >
                           {sessionLabel(session)}
                         </p>
-                        <p className="mt-1 text-[11px] text-faint">
+                        <p className="mt-1 text-[11px] text-subtle">
                           {relativeTime(session.updated_at)}
                         </p>
                       </button>
@@ -399,7 +402,7 @@ export default function App() {
                         className={`shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
                           confirmDeleteSession === session.id
                             ? "bg-red-950 text-red-300 opacity-100"
-                            : "text-faint opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
+                            : "text-subtle opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
                         }`}
                       >
                         {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
@@ -423,7 +426,7 @@ export default function App() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-full rounded-xl border border-dashed border-ink-700 px-4 py-5 text-xs leading-relaxed text-mist transition-all duration-200 hover:border-brass-500 hover:bg-brass-500/5 hover:text-brass-400 disabled:opacity-50"
+                className="w-full rounded-xl border border-dashed border-surface-700 px-4 py-5 text-xs leading-relaxed text-muted transition-all duration-200 hover:border-accent-500 hover:bg-accent-500/5 hover:text-accent-400 disabled:opacity-50"
               >
                 {uploading ? "İşleniyor..." : "PDF / TXT yükle"}
               </button>
@@ -431,19 +434,19 @@ export default function App() {
 
             <div className="flex-1 overflow-y-auto px-3 py-4">
               {documents.length === 0 ? (
-                <p className="px-2 text-xs text-faint">Henüz doküman yok.</p>
+                <p className="px-2 text-xs text-subtle">Henüz doküman yok.</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {documents.map((doc) => (
                     <li
                       key={doc.source}
-                      className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition-all duration-200 hover:border-ink-700/70 hover:bg-ink-800/50"
+                      className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition-all duration-200 hover:border-surface-700/70 hover:bg-surface-800/50"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] leading-snug text-paper">
+                        <p className="truncate text-[13px] leading-snug text-content">
                           {doc.source}
                         </p>
-                        <p className="mt-1 text-[11px] text-faint">{doc.chunks} parça</p>
+                        <p className="mt-1 text-[11px] text-subtle">{doc.chunks} parça</p>
                       </div>
                       <button
                         onClick={() => handleDelete(doc.source)}
@@ -453,7 +456,7 @@ export default function App() {
                         className={`ml-2 shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
                           confirmDelete === doc.source
                             ? "bg-red-950 text-red-300 opacity-100"
-                            : "text-faint opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
+                            : "text-subtle opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
                         }`}
                       >
                         {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
@@ -464,7 +467,7 @@ export default function App() {
               )}
             </div>
 
-            <p className="border-t border-ink-800/80 px-5 py-4 text-[11px] leading-relaxed text-faint">
+            <p className="border-t border-surface-800/80 px-5 py-4 text-[11px] leading-relaxed text-subtle">
               Dokümanlarınız bu makineden çıkmaz — arama ve cevaplama tamamen
               yerel çalışır.
             </p>
@@ -473,31 +476,31 @@ export default function App() {
       </aside>
 
       {/* Sağ panel — sohbet */}
-      <main className="flex flex-1 flex-col bg-ink-950">
+      <main className="flex flex-1 flex-col bg-surface-950">
         {messages.length > 0 && (
-          <header className="flex items-center justify-between gap-4 border-b border-ink-800 px-8 py-4">
+          <header className="flex items-center justify-between gap-4 border-b border-surface-800 px-8 py-4">
             <div className="min-w-0">
-              <h2 className="truncate font-display text-base font-semibold text-paper">
+              <h2 className="truncate font-display text-base font-semibold text-content">
                 {sessionLabel(sessions.find((s) => s.id === sessionId))}
               </h2>
-              <p className="mt-0.5 text-[11px] text-faint">
+              <p className="mt-0.5 text-[11px] text-subtle">
                 {documents.length} doküman üzerinde arama yapılıyor
               </p>
             </div>
             {loadingSession && (
-              <span className="shrink-0 text-[11px] text-faint">Yükleniyor...</span>
+              <span className="shrink-0 text-[11px] text-subtle">Yükleniyor...</span>
             )}
           </header>
         )}
         <div className="flex-1 overflow-y-auto p-6">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5">
-              <SealLogo size={64} />
+              <Mark />
               <div className="text-center">
-                <p className="font-display text-lg text-paper">
+                <p className="font-display text-lg text-content">
                   Dokümanlarınıza sorun
                 </p>
-                <p className="mt-1 text-sm text-faint">
+                <p className="mt-1 text-sm text-subtle">
                   Bir doküman yükleyin, cevap kaynaklarıyla birlikte gelsin.
                 </p>
               </div>
@@ -507,7 +510,7 @@ export default function App() {
                     <button
                       key={q}
                       onClick={() => handleAsk(q)}
-                      className="rounded-full border border-ink-700 bg-ink-900 px-4 py-2 text-xs text-mist transition hover:border-brass-500 hover:text-brass-400"
+                      className="rounded-full border border-surface-700 bg-surface-850 px-4 py-2 text-xs text-muted transition hover:border-accent-500 hover:text-accent-400"
                     >
                       {q}
                     </button>
@@ -520,7 +523,7 @@ export default function App() {
               {messages.map((msg, i) =>
                 msg.role === "user" ? (
                   <div key={i} className="msg-enter self-end max-w-[80%]">
-                    <div className="rounded-2xl rounded-br-sm bg-brass-500 px-4 py-2.5 text-sm font-medium text-ink-950">
+                    <div className="rounded-2xl rounded-br-sm bg-accent-500 px-4 py-2.5 text-sm font-medium text-surface-950">
                       {msg.content}
                     </div>
                   </div>
@@ -530,7 +533,7 @@ export default function App() {
                       className={`rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm whitespace-pre-wrap ${
                         msg.isError
                           ? "bg-red-950/60 border border-red-900 text-red-300"
-                          : "bg-ink-800/80"
+                          : "bg-surface-800/80"
                       }`}
                     >
                       {msg.content ? (
@@ -548,7 +551,7 @@ export default function App() {
                     </div>
                     {msg.sources?.length > 0 && (
                       <div className="mt-2 flex flex-col gap-2">
-                        <p className="text-xs font-medium text-faint">
+                        <p className="text-xs font-medium text-subtle">
                           Kaynaklar
                         </p>
                         {msg.sources.map((src, j) => (
@@ -557,20 +560,20 @@ export default function App() {
                             ref={(el) => {
                               sourceRefs.current[`${i}:${j}`] = el;
                             }}
-                            className={`flex items-start gap-3 rounded-lg border bg-ink-900/60 px-3 py-2.5 transition-colors duration-500 ${
+                            className={`flex items-start gap-3 rounded-lg border bg-surface-850/60 px-3 py-2.5 transition-colors duration-500 ${
                               highlighted === `${i}:${j}`
-                                ? "source-flash border-brass-500"
-                                : "border-ink-800"
+                                ? "source-flash border-accent-500"
+                                : "border-surface-800"
                             }`}
                           >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-brass-500/70 text-xs font-medium text-brass-400">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-accent-500/70 text-xs font-medium text-accent-400">
                               {j + 1}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate text-xs font-medium text-brass-400">
+                              <p className="truncate text-xs font-medium text-accent-400">
                                 {src.source}
                               </p>
-                              <p className="mt-1 line-clamp-3 text-xs text-faint">
+                              <p className="mt-1 line-clamp-3 text-xs text-subtle">
                                 {src.text}
                               </p>
                             </div>
@@ -585,20 +588,20 @@ export default function App() {
             </div>
           )}
         </div>
-        <div className="border-t border-ink-800 p-4">
+        <div className="border-t border-surface-800 p-4">
           <div className="mx-auto flex max-w-3xl gap-2">
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAsk()}
               disabled={asking}
-              className="flex-1 rounded-lg bg-ink-900 border border-ink-800 px-4 py-2.5 text-sm outline-none transition focus:border-brass-500 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-surface-850 border border-surface-800 px-4 py-2.5 text-sm outline-none transition focus:border-accent-500 disabled:opacity-50"
               placeholder="Dokümanlarınıza bir soru sorun..."
             />
             <button
               onClick={() => handleAsk()}
               disabled={asking || !question.trim()}
-              className="rounded-lg bg-brass-500 px-4 py-2.5 text-sm font-medium text-ink-950 transition hover:bg-brass-400 disabled:opacity-50 disabled:hover:bg-brass-500"
+              className="rounded-lg bg-accent-500 px-4 py-2.5 text-sm font-medium text-surface-950 transition hover:bg-accent-400 disabled:opacity-50 disabled:hover:bg-accent-500"
             >
               {asking ? "..." : "Sor"}
             </button>
