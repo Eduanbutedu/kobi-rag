@@ -31,10 +31,12 @@ DEFAULT_RESULTS_DIR = Path("eval/results")
 RECALL_CUTOFFS = (1, 3, 5, 10)
 
 
-def evaluate_case(store: DocumentStore, case: EvalCase, k: int, mode: str = HYBRID) -> dict:
+def evaluate_case(
+    store: DocumentStore, case: EvalCase, k: int, mode: str = HYBRID, rerank: bool = False
+) -> dict:
     """Retrieve for one question and score it. Returns a per-question record."""
     started = time.perf_counter()
-    hits = retrieve(store, case.question, k=k, mode=mode)
+    hits = retrieve(store, case.question, k=k, mode=mode, rerank=rerank)
     latency_ms = (time.perf_counter() - started) * 1000
 
     retrieved_ids = [hit["id"] for hit in hits]
@@ -76,9 +78,13 @@ def aggregate(records: list[dict], k: int) -> dict:
     return metrics
 
 
-def _warm_up(store: DocumentStore, mode: str) -> None:
-    """Pay the embedding-model load cost before timing anything."""
-    retrieve(store, "isinma sorgusu", k=1, mode=mode)
+def _warm_up(store: DocumentStore, mode: str, rerank: bool) -> None:
+    """Pay the model load costs before timing anything.
+
+    With reranking on this also loads the cross-encoder, which otherwise
+    would land entirely on the first question's latency.
+    """
+    retrieve(store, "isinma sorgusu", k=1, mode=mode, rerank=rerank)
 
 
 def _missing_chunk_ids(store: DocumentStore, cases: list[EvalCase]) -> list[int]:
@@ -96,6 +102,7 @@ def format_report(result: dict) -> str:
         ("db", f"{result['db']} ({result['chunk_count']} chunks)"),
         ("k", result["k"]),
         ("mode", result.get("mode", "dense")),
+        ("rerank", "on" if result.get("rerank") else "off"),
         ("run at", result["timestamp"]),
     ):
         lines.append(f"{label:<10}{value}")
@@ -130,7 +137,12 @@ def format_per_question(records: list[dict]) -> str:
 
 
 def run(
-    dataset_path: Path, db_path: Path, k: int, label: str = "", mode: str = HYBRID
+    dataset_path: Path,
+    db_path: Path,
+    k: int,
+    label: str = "",
+    mode: str = HYBRID,
+    rerank: bool = False,
 ) -> dict:
     """Evaluate the whole golden set and return the result document."""
     cases = load_dataset(dataset_path)
@@ -151,8 +163,8 @@ def run(
                 "         golden set if this is unexpected.\n"
             )
 
-        _warm_up(store, mode)
-        records = [evaluate_case(store, case, k, mode) for case in cases]
+        _warm_up(store, mode, rerank)
+        records = [evaluate_case(store, case, k, mode, rerank) for case in cases]
     finally:
         store.close()
 
@@ -163,6 +175,7 @@ def run(
         "db": str(db_path),
         "k": k,
         "mode": mode,
+        "rerank": rerank,
         "question_count": len(records),
         "chunk_count": chunk_count,
         "missing_chunk_ids": missing,
@@ -195,6 +208,11 @@ def main() -> None:
         default=HYBRID,
         help="retrieval strategy to measure",
     )
+    parser.add_argument(
+        "--rerank",
+        action="store_true",
+        help="re-score the shortlist with the cross-encoder",
+    )
     parser.add_argument("--per-question", action="store_true", help="print each question's rank")
     parser.add_argument("--no-save", action="store_true", help="print only, write no JSON")
     args = parser.parse_args()
@@ -204,7 +222,7 @@ def main() -> None:
     if args.label and not args.label.replace("-", "").replace("_", "").isalnum():
         parser.error("--label must be alphanumeric (dashes and underscores allowed)")
 
-    result = run(args.dataset, args.db, args.k, args.label, args.mode)
+    result = run(args.dataset, args.db, args.k, args.label, args.mode, args.rerank)
     print(format_report(result))
     if args.per_question:
         print(format_per_question(result["per_question"]))

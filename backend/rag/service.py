@@ -6,6 +6,7 @@ from pathlib import Path
 from rag.chunking import chunk_text
 from rag.embedding import embed_texts
 from rag.extraction import extract_text
+from rag.rerank import rerank as rerank_candidates
 from rag.store import DocumentStore
 
 DENSE = "dense"
@@ -14,6 +15,8 @@ RETRIEVAL_MODES = (DENSE, HYBRID)
 
 # Her iki aramadan da bu kadar aday çekilip birleştirilir
 FUSION_CANDIDATES = 20
+# Cross-encoder'a verilecek kısa liste; puanlama pahalı olduğu için dar tutulur
+RERANK_CANDIDATES = 20
 # Reciprocal Rank Fusion sabiti. 60, yöntemi tanıtan çalışmadaki değer;
 # tek bir listenin ilk sıralarının sonucu tek başına belirlemesini engeller.
 RRF_K = 60
@@ -84,6 +87,7 @@ def retrieve(
     mode: str = HYBRID,
     dense_weight: float = DENSE_WEIGHT,
     bm25_weight: float = BM25_WEIGHT,
+    rerank: bool = False,
 ) -> list[dict]:
     """Return the k chunks most relevant to the query: [{id, text, source, score}, ...].
 
@@ -98,17 +102,29 @@ def retrieve(
     Keyword results carry less weight than embedding results so that they add
     to the ranking instead of overruling it. The two weights are arguments
     rather than constants so they can be tuned against the golden set.
+
+    With `rerank` set, a wider shortlist is retrieved and then re-scored by a
+    cross-encoder that reads question and chunk together; `score` is then the
+    cross-encoder score. It costs a model call per query, so it is off by
+    default and switched on per run.
     """
     if mode not in RETRIEVAL_MODES:
         raise ValueError(f"unknown retrieval mode '{mode}' (expected one of {RETRIEVAL_MODES})")
 
+    # Yeniden sıralanacaksa geniş bir kısa liste çekilir, sonra k'ya inilir
+    candidate_k = RERANK_CANDIDATES if rerank else k
+
     [query_vector] = embed_texts([query])
     if mode == DENSE:
-        return store.search(query_vector, k=k)
+        candidates = store.search(query_vector, k=candidate_k)
+    else:
+        dense_hits = store.search(query_vector, k=FUSION_CANDIDATES)
+        keyword_hits = store.bm25_search(query, k=FUSION_CANDIDATES)
+        # Ağırlıklar sıralamalarla aynı yerde ve aynı sırada kuruluyor
+        candidates = reciprocal_rank_fusion(
+            [dense_hits, keyword_hits], [dense_weight, bm25_weight]
+        )[:candidate_k]
 
-    dense_hits = store.search(query_vector, k=FUSION_CANDIDATES)
-    keyword_hits = store.bm25_search(query, k=FUSION_CANDIDATES)
-    # Ağırlıklar sıralamalarla aynı yerde ve aynı sırada kuruluyor
-    return reciprocal_rank_fusion(
-        [dense_hits, keyword_hits], [dense_weight, bm25_weight]
-    )[:k]
+    if rerank:
+        return rerank_candidates(query, candidates, k)
+    return candidates[:k]

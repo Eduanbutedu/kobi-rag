@@ -227,7 +227,9 @@ def test_dense_mode_does_not_touch_the_keyword_index(fake_store):
     results = retrieve(fake_store, "soru", k=2, mode=DENSE)
     assert fake_store.bm25_k is None
     assert fake_store.search_k == 2
-    assert _ids(results) == [1, 2, 3]
+    # k'ya kırpma retrieve içinde de yapılıyor; store'un k'yı dinlemesine
+    # güvenilmiyor
+    assert _ids(results) == [1, 2]
 
 
 def test_hybrid_mode_merges_both_and_cuts_to_k(fake_store):
