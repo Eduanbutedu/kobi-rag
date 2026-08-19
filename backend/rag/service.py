@@ -15,8 +15,10 @@ RETRIEVAL_MODES = (DENSE, HYBRID)
 
 # Her iki aramadan da bu kadar aday çekilip birleştirilir
 FUSION_CANDIDATES = 20
-# Cross-encoder'a verilecek kısa liste; puanlama pahalı olduğu için dar tutulur
-RERANK_CANDIDATES = 20
+# Cross-encoder'a verilecek kısa liste; puanlama pahalı olduğu için dar tutulur.
+# k=10 ile bu değer de 10 olduğunda yeniden sıralama yalnızca ilk onu kendi
+# içinde sıralayabilir: 11-20 arasındaki bir chunk artık ilk ona giremez.
+RERANK_CANDIDATES = 10
 # Reciprocal Rank Fusion sabiti. 60, yöntemi tanıtan çalışmadaki değer;
 # tek bir listenin ilk sıralarının sonucu tek başına belirlemesini engeller.
 RRF_K = 60
