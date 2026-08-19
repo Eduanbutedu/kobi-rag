@@ -1,11 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
+import { parseCitations } from "./citations";
 
 const SUGGESTED_QUESTIONS = [
   "Bu doküman ne hakkında?",
   "En önemli bulgular neler?",
   "Which model performed best on FD001?",
 ];
+
+function AnswerText({ text, sourceCount, onCite }) {
+  const parts = parseCitations(text, sourceCount);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.type === "citation" ? (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onCite(part.index)}
+            title={`Kaynak ${part.value}`}
+            aria-label={`Kaynak ${part.value}'e git`}
+            className="citation-mark"
+          >
+            {part.value}
+          </button>
+        ) : (
+          <span key={i}>{part.value}</span>
+        )
+      )}
+    </>
+  );
+}
 
 function SealLogo({ size = 36 }) {
   return (
@@ -39,6 +64,18 @@ export default function App() {
   const [asking, setAsking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const chatEndRef = useRef(null);
+  // Kaynak kartlarına "mesajIndeksi:kaynakIndeksi" anahtarıyla erişiliyor
+  const sourceRefs = useRef({});
+  const [highlighted, setHighlighted] = useState(null);
+
+  const focusSource = (messageIndex, sourceIndex) => {
+    const key = `${messageIndex}:${sourceIndex}`;
+    const card = sourceRefs.current[key];
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlighted(key);
+    window.setTimeout(() => setHighlighted((k) => (k === key ? null : k)), 1600);
+  };
 
   async function refreshDocuments() {
     try {
@@ -261,7 +298,15 @@ export default function App() {
                           : "bg-ink-800/80"
                       }`}
                     >
-                      {msg.content || (msg.streaming ? "Düşünüyor..." : "")}
+                      {msg.content ? (
+                        <AnswerText
+                          text={msg.content}
+                          sourceCount={msg.sources?.length ?? 0}
+                          onCite={(sourceIndex) => focusSource(i, sourceIndex)}
+                        />
+                      ) : (
+                        msg.streaming ? "Düşünüyor..." : ""
+                      )}
                       {msg.streaming && msg.content && (
                         <span className="caret" aria-hidden="true" />
                       )}
@@ -274,10 +319,17 @@ export default function App() {
                         {msg.sources.map((src, j) => (
                           <div
                             key={j}
-                            className="flex items-start gap-3 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-2.5"
+                            ref={(el) => {
+                              sourceRefs.current[`${i}:${j}`] = el;
+                            }}
+                            className={`flex items-start gap-3 rounded-lg border bg-ink-900/60 px-3 py-2.5 transition-colors duration-500 ${
+                              highlighted === `${i}:${j}`
+                                ? "source-flash border-brass-500"
+                                : "border-ink-800"
+                            }`}
                           >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-brass-500/70 text-[10px] font-medium text-brass-400">
-                              %{Math.round(src.score * 100)}
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-brass-500/70 text-xs font-medium text-brass-400">
+                              {j + 1}
                             </span>
                             <div className="min-w-0">
                               <p className="truncate text-xs font-medium text-brass-400">
