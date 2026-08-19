@@ -22,7 +22,7 @@ from eval.metrics import (
     recall_at_k,
     reciprocal_rank_at_k,
 )
-from rag.service import retrieve
+from rag.service import HYBRID, RETRIEVAL_MODES, retrieve
 from rag.store import DocumentStore
 
 DEFAULT_DATASET = Path("eval/dataset.jsonl")
@@ -31,10 +31,10 @@ DEFAULT_RESULTS_DIR = Path("eval/results")
 RECALL_CUTOFFS = (1, 3, 5, 10)
 
 
-def evaluate_case(store: DocumentStore, case: EvalCase, k: int) -> dict:
+def evaluate_case(store: DocumentStore, case: EvalCase, k: int, mode: str = HYBRID) -> dict:
     """Retrieve for one question and score it. Returns a per-question record."""
     started = time.perf_counter()
-    hits = retrieve(store, case.question, k=k)
+    hits = retrieve(store, case.question, k=k, mode=mode)
     latency_ms = (time.perf_counter() - started) * 1000
 
     retrieved_ids = [hit["id"] for hit in hits]
@@ -76,9 +76,9 @@ def aggregate(records: list[dict], k: int) -> dict:
     return metrics
 
 
-def _warm_up(store: DocumentStore) -> None:
+def _warm_up(store: DocumentStore, mode: str) -> None:
     """Pay the embedding-model load cost before timing anything."""
-    retrieve(store, "isinma sorgusu", k=1)
+    retrieve(store, "isinma sorgusu", k=1, mode=mode)
 
 
 def _missing_chunk_ids(store: DocumentStore, cases: list[EvalCase]) -> list[int]:
@@ -95,6 +95,7 @@ def format_report(result: dict) -> str:
         ("dataset", f"{result['dataset']} ({result['question_count']} questions)"),
         ("db", f"{result['db']} ({result['chunk_count']} chunks)"),
         ("k", result["k"]),
+        ("mode", result.get("mode", "dense")),
         ("run at", result["timestamp"]),
     ):
         lines.append(f"{label:<10}{value}")
@@ -128,7 +129,9 @@ def format_per_question(records: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def run(dataset_path: Path, db_path: Path, k: int, label: str = "") -> dict:
+def run(
+    dataset_path: Path, db_path: Path, k: int, label: str = "", mode: str = HYBRID
+) -> dict:
     """Evaluate the whole golden set and return the result document."""
     cases = load_dataset(dataset_path)
     store = DocumentStore(db_path)
@@ -148,8 +151,8 @@ def run(dataset_path: Path, db_path: Path, k: int, label: str = "") -> dict:
                 "         golden set if this is unexpected.\n"
             )
 
-        _warm_up(store)
-        records = [evaluate_case(store, case, k) for case in cases]
+        _warm_up(store, mode)
+        records = [evaluate_case(store, case, k, mode) for case in cases]
     finally:
         store.close()
 
@@ -159,6 +162,7 @@ def run(dataset_path: Path, db_path: Path, k: int, label: str = "") -> dict:
         "dataset": str(dataset_path),
         "db": str(db_path),
         "k": k,
+        "mode": mode,
         "question_count": len(records),
         "chunk_count": chunk_count,
         "missing_chunk_ids": missing,
@@ -185,6 +189,12 @@ def main() -> None:
     parser.add_argument("--db", type=Path, default=DEFAULT_DB, help="vector store path")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_RESULTS_DIR, help="results folder")
     parser.add_argument("--label", default="", help="short name for this run, e.g. 'baseline'")
+    parser.add_argument(
+        "--mode",
+        choices=RETRIEVAL_MODES,
+        default=HYBRID,
+        help="retrieval strategy to measure",
+    )
     parser.add_argument("--per-question", action="store_true", help="print each question's rank")
     parser.add_argument("--no-save", action="store_true", help="print only, write no JSON")
     args = parser.parse_args()
@@ -194,7 +204,7 @@ def main() -> None:
     if args.label and not args.label.replace("-", "").replace("_", "").isalnum():
         parser.error("--label must be alphanumeric (dashes and underscores allowed)")
 
-    result = run(args.dataset, args.db, args.k, args.label)
+    result = run(args.dataset, args.db, args.k, args.label, args.mode)
     print(format_report(result))
     if args.per_question:
         print(format_per_question(result["per_question"]))
