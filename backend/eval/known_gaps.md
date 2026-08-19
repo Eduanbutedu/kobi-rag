@@ -43,7 +43,7 @@ Source: `eval/unanswered_manual.jsonl` (kept as the machine-readable record).
 | --- | --- | --- |
 | man014 | veri ihlali yaşarsam kaç saat içinde bildirmem gerekiyor | chunk sınırında / terminoloji farkı — 72 saatlik bildirim Kurul kararında, soru "kaç saat" diyor ⟳ |
 | man015 | açık rıza almadan müşterilerimi e-posta listeme ekleyebilir miyim | korpusta hiç yok — ticari elektronik ileti mevzuatı (6563 sayılı Kanun) yüklenmedi |
-| man019 | bir müşteri verilerimi silin derse ne yapmam gerekiyor | **atanmadı** — bkz. aşağıdaki not |
+| man019 | bir müşteri verilerimi silin derse ne yapmam gerekiyor | terminoloji farkı — cevap korpusta (KVKK md. 7, chunk 1397) ama soru "silin derse" diyor, kanun "silinmesi, yok edilmesi veya anonim hâle getirilmesi" ⟳ |
 
 ## Şirket / ticaret
 
@@ -63,7 +63,7 @@ Source: `eval/unanswered_manual.jsonl` (kept as the machine-readable record).
 
 | id | Soru | Sebep |
 | --- | --- | --- |
-| man032 | faturayı en geç kaç gün içinde düzenlemem gerekiyor | **atanmadı** — bkz. aşağıdaki not |
+| man032 | faturayı en geç kaç gün içinde düzenlemem gerekiyor | terminoloji farkı — cevap korpusta (VUK md. 231, chunk 8428) ama sorgu ödeme/gecikme süresi chunk'larını çekiyor ⟳ |
 
 ## Kira / sözleşme
 
@@ -95,15 +95,23 @@ the questions in a scratch file and point `--questions` at it.
 problem and retrieval cannot fix them. Those need the missing document
 ingested — add it to `eval/corpus_sources.txt` and re-run the fetch.
 
-## Rows still without a reason
+## Re-checked under hybrid + reranking
 
-`man019` and `man032` were not covered by the reason mapping, and the two
-entries that were supplied for them — a maternity-leave question and the
-VERBİS registration question — are not in this file: both are already
-answered and live in `eval/dataset.jsonl` as `man005` and `man013`. So two
-reasons are still needed:
+`man019` and `man032` were the two rows left without a reason. Both were
+re-run through `retrieve()` with the current pipeline -- hybrid search,
+weighted RRF at 0.95 and cross-encoder reranking.
 
-| id | Soru | Neden sorulacak |
+**Neither is found; both answers are in the corpus.** So these are retrieval
+failures, not missing documents, and they stay on this list:
+
+| id | Verdict | Evidence |
 | --- | --- | --- |
-| man019 | bir müşteri verilerimi silin derse ne yapmam gerekiyor | KVKK metinleri korpusta var ve silme hakkını düzenliyor, yani bu bir terminoloji farkı olabilir — doğrulanması gerekiyor |
-| man032 | faturayı en geç kaç gün içinde düzenlemem gerekiyor | Vergi Usul Kanunu korpusta ve yedi günlük süreyi içeriyor, yani neden bulunamadığı açık değil |
+| man019 | not in top 10 | KVKK md. 7 sits in chunk 1397 (`kvkk-kanunu.pdf`) and states the erasure rule outright. Retrieval returns neighbouring KVKK material instead — rank 2 lists the data subject's rights generally, but the governing article never surfaces. |
+| man032 | not in top 10 | VUK md. 231 sits in chunk 8428 (`vergi-usul-kanunu.pdf`) and carries both "fatura" and "yedi gün". Every one of the top ten is about payment or late-payment deadlines instead: the question's wording pulls "süre", "gün" and "geç" towards the wrong subject. |
+
+Both are worth keeping as unanswered until they are fixed: they are the
+clearest evidence left that retrieval still misses text the corpus holds.
+
+The earlier mapping supplied a maternity-leave question and the VERBİS
+registration question for these two rows, but neither belongs here -- both are
+already answered and live in `eval/dataset.jsonl` as `man005` and `man013`.
