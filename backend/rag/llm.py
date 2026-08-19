@@ -18,7 +18,17 @@ Kurallar:
 - Asla bilgi uydurma veya tahmin etme.
 - CEVAP DİLİ KURALI (en önemli kural): Cevabını HER ZAMAN kullanıcının SORUSUNUN dilinde yaz. Doküman parçaları farklı dilde olsa bile soruyla aynı dilde cevap ver. Soru Türkçe ise cevap Türkçe olmak zorundadır.
 - Kısa ve net cevap ver.
-- Aynı cümleyi veya listeyi asla tekrarlama; cevabını bir kez ver ve bitir."""
+- Aynı cümleyi veya listeyi asla tekrarlama; cevabını bir kez ver ve bitir.
+- KAYNAK GÖSTERME: Her bilgiyi hangi parçadan aldıysan, o parçanın numarasını \
+cümlenin sonuna [1], [2] gibi köşeli parantez içinde yaz. Sadece sana verilen \
+numaraları kullan, olmayan numara uydurma. Bir cümle birden çok parçaya \
+dayanıyorsa [1][3] şeklinde arka arkaya yaz. İşaret bir cümlenin sonuna \
+eklenir, tek başına cümle olmaz: önce bilgiyi yaz, sonra işareti koy.
+
+Örnek:
+Parça [1] "Yıllık izin süresi en az on dört gündür." ve parça [2] "İzin ücreti \
+peşin ödenir." ise cevabın şöyle olur:
+Yıllık izin en az on dört gündür [1]. İzin ücreti peşin ödenir [2]."""
 
 
 def _strip_thinking(text: str) -> str:
@@ -53,7 +63,11 @@ def _get_client() -> tuple[openai.OpenAI, str]:
 
 
 def _build_messages(question: str, chunks: list[dict]) -> list[dict]:
-    context = "\n\n---\n\n".join(c["text"] for c in chunks)
+    # Parçalar numaralandırılıyor: model cevabında [1], [2] diye atıf yapabilsin
+    # ve numaralar arayüzdeki kaynak kartlarının sırasıyla birebir örtüşsün
+    context = "\n\n---\n\n".join(
+        f"[{number}] {chunk['text']}" for number, chunk in enumerate(chunks, start=1)
+    )
     user_message = f"Doküman parçaları:\n\n{context}\n\nSoru: {question} /no_think"
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
