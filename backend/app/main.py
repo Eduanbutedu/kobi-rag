@@ -3,14 +3,14 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.deps import get_store
+from app.deps import get_chat, get_store
 from rag.extraction import SUPPORTED_EXTENSIONS
-from rag.llm import generate_answer, stream_answer
+from rag.llm import generate_answer, generate_title, stream_answer
 from rag.service import ingest_file, retrieve
 
 app = FastAPI(
@@ -34,6 +34,42 @@ class SearchRequest(BaseModel):
 class AskRequest(BaseModel):
     question: str
     k: int = 3
+    session_id: int | None = None
+
+
+NO_DOCUMENTS = "Henüz yüklenmiş doküman yok."
+
+
+def _resolve_session(session_id: int | None) -> int:
+    """Use the session given, or start one. Unknown ids are a client error."""
+    chat = get_chat()
+    if session_id is None:
+        return chat.create_session()
+    if not chat.session_exists(session_id):
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+    return session_id
+
+
+def _record_exchange(session_id: int, question: str, answer: str, sources: list[dict]) -> bool:
+    """Store one question and its answer. True if this was the session's first."""
+    chat = get_chat()
+    first = chat.message_count(session_id) == 0
+    chat.add_message(session_id, "user", question)
+    chat.add_message(session_id, "assistant", answer, sources)
+    return first
+
+
+def _name_session(session_id: int, question: str) -> None:
+    """Title a session from its opening question, after the answer is sent.
+
+    Runs as a background task: it is a second model call and nobody should wait
+    for a sidebar label. On failure the title stays empty, which the interface
+    already renders as "Yeni sohbet".
+    """
+    try:
+        get_chat().set_title(session_id, generate_title(question))
+    except Exception:  # noqa: BLE001 - başlık üretimi cevabı asla düşürmemeli
+        pass
 
 
 @app.get("/health")
@@ -68,30 +104,45 @@ def search(request: SearchRequest) -> dict:
 
 
 @app.post("/ask")
-def ask(request: AskRequest) -> dict:
+def ask(request: AskRequest, background: BackgroundTasks) -> dict:
+    session_id = _resolve_session(request.session_id)
     chunks = retrieve(get_store(), request.question, k=request.k)
-    if not chunks:
-        return {
-            "question": request.question,
-            "answer": "Henüz yüklenmiş doküman yok.",
-            "sources": [],
-        }
-    answer = generate_answer(request.question, chunks)
-    return {"question": request.question, "answer": answer, "sources": chunks}
+    answer = generate_answer(request.question, chunks) if chunks else NO_DOCUMENTS
+
+    if _record_exchange(session_id, request.question, answer, chunks):
+        background.add_task(_name_session, session_id, request.question)
+
+    return {
+        "question": request.question,
+        "answer": answer,
+        "sources": chunks,
+        "session_id": session_id,
+    }
 
 
 @app.post("/ask/stream")
-def ask_stream(request: AskRequest) -> StreamingResponse:
+def ask_stream(request: AskRequest, background: BackgroundTasks) -> StreamingResponse:
+    session_id = _resolve_session(request.session_id)
     chunks = retrieve(get_store(), request.question, k=request.k)
 
     def event_stream():
+        meta = json.dumps({"session_id": session_id}, ensure_ascii=False)
+        yield f"event: session\ndata: {meta}\n\n"
         yield f"event: sources\ndata: {json.dumps(chunks, ensure_ascii=False)}\n\n"
+
         if not chunks:
-            payload = json.dumps("Henüz yüklenmiş doküman yok.", ensure_ascii=False)
-            yield f"event: delta\ndata: {payload}\n\n"
+            answer = NO_DOCUMENTS
+            yield f"event: delta\ndata: {json.dumps(answer, ensure_ascii=False)}\n\n"
         else:
+            pieces = []
             for piece in stream_answer(request.question, chunks):
+                pieces.append(piece)
                 yield f"event: delta\ndata: {json.dumps(piece, ensure_ascii=False)}\n\n"
+            answer = "".join(pieces)
+
+        # Tam cevap ancak akış bitince elde oluyor; kayıt burada yapılıyor
+        if _record_exchange(session_id, request.question, answer, chunks):
+            background.add_task(_name_session, session_id, request.question)
         yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -108,3 +159,29 @@ def delete_document(source: str) -> dict:
     if deleted == 0:
         raise HTTPException(status_code=404, detail=f"Document not found: {source}")
     return {"source": source, "deleted_chunks": deleted}
+
+
+@app.post("/sessions")
+def create_session() -> dict:
+    session_id = get_chat().create_session()
+    return {"session_id": session_id, "title": ""}
+
+
+@app.get("/sessions")
+def list_sessions() -> dict:
+    return {"sessions": get_chat().list_sessions()}
+
+
+@app.get("/sessions/{session_id}/messages")
+def session_messages(session_id: int) -> dict:
+    chat = get_chat()
+    if not chat.session_exists(session_id):
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+    return {"session_id": session_id, "messages": chat.get_messages(session_id)}
+
+
+@app.delete("/sessions/{session_id}")
+def delete_session(session_id: int) -> dict:
+    if not get_chat().delete_session(session_id):
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+    return {"session_id": session_id, "deleted": True}

@@ -114,6 +114,53 @@ def complete(
     return _strip_thinking(response.choices[0].message.content or "")
 
 
+TITLE_SYSTEM_PROMPT = """Sana bir soru verilecek. Görevin, o soruyu bir sohbet \
+listesinde temsil edecek çok kısa bir başlık yazmak.
+
+Kurallar:
+- En fazla 5 kelime.
+- Soruyla aynı dilde yaz.
+- Tırnak, nokta, soru işareti veya başka noktalama kullanma.
+- Cevap verme, açıklama yapma; sadece başlığı yaz.
+
+Örnek soru: işten çıkardığım işçi dava açmak isterse ne kadar süresi var
+Örnek başlık: İşe iade davası süresi"""
+
+TITLE_MAX_WORDS = 6
+TITLE_MAX_CHARS = 60
+
+
+def clean_title(raw: str, fallback: str = "") -> str:
+    """Reduce a model reply to a usable session title.
+
+    A small model tends to add quotes, a trailing full stop, or a "Başlık:"
+    prefix. Anything left unusable falls back to the question itself, which is
+    always better than an empty row in the sidebar.
+    """
+    line = next((line.strip() for line in raw.splitlines() if line.strip()), "")
+    for prefix in ("Başlık:", "BAŞLIK:", "Title:"):
+        if line.startswith(prefix):
+            line = line[len(prefix) :].strip()
+    line = line.strip("\"'“”«»").strip()
+    line = re.sub(r"[.!?;:,]+$", "", line).strip()
+    line = " ".join(line.split()[:TITLE_MAX_WORDS])
+
+    if not line:
+        line = " ".join(fallback.split()[:TITLE_MAX_WORDS])
+    return line[:TITLE_MAX_CHARS].strip()
+
+
+def generate_title(question: str) -> str:
+    """Name a chat session after its first question."""
+    reply = complete(
+        TITLE_SYSTEM_PROMPT,
+        f"Soru: {question}\n\nBaşlık: /no_think",
+        temperature=0.3,
+        max_tokens=32,
+    )
+    return clean_title(reply, fallback=question)
+
+
 def stream_answer(question: str, chunks: list[dict]) -> Iterator[str]:
     """Yield answer text incrementally as the model generates it."""
     client, model_id = _get_client()
