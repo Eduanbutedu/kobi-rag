@@ -2,7 +2,15 @@
 
 import pytest
 
-from rag.service import DENSE, HYBRID, RRF_K, reciprocal_rank_fusion, retrieve
+from rag.service import (
+    BM25_WEIGHT,
+    DENSE,
+    DENSE_WEIGHT,
+    HYBRID,
+    RRF_K,
+    reciprocal_rank_fusion,
+    retrieve,
+)
 
 
 def _chunk(chunk_id, score=0.0):
@@ -242,6 +250,39 @@ def test_keyword_side_sees_the_raw_question(fake_store):
 
 def test_hybrid_is_the_default(fake_store):
     assert _ids(retrieve(fake_store, "soru", k=3))[0] == 3
+
+
+def test_retrieve_passes_the_measured_default_weights(fake_store, monkeypatch):
+    """The weights are a measured choice, not an arbitrary one.
+
+    0.5, 0.87, 0.90, 0.95 and 1.0 were run against the golden set; 0.95 won.
+    Changing these should mean re-running that sweep, so the values are
+    pinned here and explained in eval/README.md.
+    """
+    captured = {}
+
+    def _fusion(rankings, weights=None, k=RRF_K):
+        captured["weights"] = weights
+        return rankings[0]
+
+    monkeypatch.setattr("rag.service.reciprocal_rank_fusion", _fusion)
+    retrieve(fake_store, "soru", k=3)
+
+    assert captured["weights"] == [DENSE_WEIGHT, BM25_WEIGHT]
+    assert (DENSE_WEIGHT, BM25_WEIGHT) == (1.0, 0.95)
+
+
+def test_the_weights_are_overridable_per_call(fake_store, monkeypatch):
+    captured = {}
+
+    def _fusion(rankings, weights=None, k=RRF_K):
+        captured["weights"] = weights
+        return rankings[0]
+
+    monkeypatch.setattr("rag.service.reciprocal_rank_fusion", _fusion)
+    retrieve(fake_store, "soru", k=3, dense_weight=1.0, bm25_weight=0.5)
+
+    assert captured["weights"] == [1.0, 0.5]
 
 
 def test_an_unknown_mode_is_rejected(fake_store):

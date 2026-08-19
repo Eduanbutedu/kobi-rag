@@ -18,11 +18,14 @@ FUSION_CANDIDATES = 20
 # tek bir listenin ilk sıralarının sonucu tek başına belirlemesini engeller.
 RRF_K = 60
 
-# Anahtar kelime araması sıralamaya katkı versin, onu devralmasın diye daha
-# hafif. Eşit ağırlıkta, yalnızca dense'in bulduğu 6. sıradaki bir sonuç
-# 1/66 alıyor ve BM25'in ilk beşinin (1/61...1/65) altında kalıyordu.
+# Altın sette 0,5 / 0,87 / 0,90 / 0,95 / 1,0 ölçüldü; 0,95 seçildi. Gerekçe
+# ve kabul edilen ödünler eval/README.md'deki "Choosing the keyword weight"
+# bölümünde. Eşit ağırlıkta (1,0) yalnızca dense'in bulduğu 6. sıradaki bir
+# sonuç 1/66 alıp BM25'in ilk beşinin altında kalıyor; 0,95 bu baskıyı
+# yumuşatırken anahtar kelimenin tek başına bulduğu sonuçların ilk ona
+# girmesine hâlâ izin veriyor.
 DENSE_WEIGHT = 1.0
-BM25_WEIGHT = 0.5
+BM25_WEIGHT = 0.95
 
 
 def ingest_file(store: DocumentStore, file_path: str | Path) -> int:

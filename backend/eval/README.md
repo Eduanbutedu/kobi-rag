@@ -180,6 +180,52 @@ python -m eval.run --k 10 --label baseline --per-question
 
 Prints a report and writes `eval/results/<timestamp>-baseline.json`.
 
+## Choosing the keyword weight
+
+Retrieval fuses embedding and keyword results with weighted RRF. The
+embedding side is fixed at 1.0; the keyword weight was chosen by measurement,
+not by feel. Five values were run against the full golden set:
+
+| bm25 weight | Hit@1 | Hit@3 | Hit@10 | MRR@10 |
+| ---: | ---: | ---: | ---: | ---: |
+| dense only | 0.475 | 0.746 | 0.932 | 0.629 |
+| 0.50 | 0.559 | 0.712 | 0.949 | 0.677 |
+| 0.87 | 0.576 | 0.746 | 0.949 | 0.689 |
+| 0.90 | 0.576 | 0.746 | 0.966 | 0.692 |
+| **0.95** | **0.576** | **0.763** | **0.983** | **0.695** |
+| 1.00 | 0.542 | 0.780 | 0.949 | 0.667 |
+
+The weight decides which of two opposite failures you get, and the crossover
+is arithmetic rather than luck. A chunk only the keyword search finds scores
+`w/61` at best; a chunk only the embedding search finds scores `1/70` at
+rank 10. So below `w = 0.871` a keyword-only result can never reach the top
+10 at all, and above it embedding-only results start being displaced.
+
+**0.95 was chosen.** It is the best or joint-best on every headline metric,
+and it is the only setting that both keeps the embedding-only questions and
+recovers the keyword-only ones.
+
+What that costs, stated plainly:
+
+- **man031 is lost** — it sits at rank 10 under dense and drops out.
+- **man016 and man021 stay in the top 10 but slide**, 7 → 9 and 6 → 8.
+- In exchange `gen025`, `gen052` and `gen064` come back at ranks 8, 6 and 5.
+  The embedding search misses all three entirely.
+
+The deciding argument is which subset to trust. `man*` labels were picked out
+of the embedding search's own top 10, so that subset is biased towards it and
+any change reads as a regression. `gen*` labels were assigned when the
+question was written and owe nothing to retrieval, and there 0.95 is far
+ahead: Hit@10 1.000 against 0.897, MRR 0.833 against 0.791.
+
+At 59 questions a 0.017 difference is a single question, so the third decimal
+here means nothing. What is solid is the shape: everything between 0.87 and
+0.95 beats both dense-only and equal weighting, and latency is flat across
+the whole range at 39-42 ms.
+
+Both weights are arguments on `retrieve()`, so a run can override them
+without touching the default. If you change the default, re-run this sweep.
+
 ### The golden set has three kinds of question, and they behave differently
 
 The `id` prefix records where a question's chunk ids came from, and that
