@@ -12,6 +12,8 @@
   --color-brass-500: #c9a050;
   --color-brass-400: #ddb86a;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-rail: 6px 0 18px rgb(0 0 0 / 0.35);
 }
 
 @keyframes blink {
@@ -33,6 +35,23 @@
 
 .msg-enter {
   animation: rise 150ms ease-out;
+}
+
+/* Marka ve panel başlıkları. WONK ekseni Fraunces'in açılı uçlarını açıyor;
+   ağır ağırlıkla birlikte koyu zeminde ince kalmayan bir arşiv hissi veriyor. */
+.brand {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-variation-settings: "SOFT" 20, "WONK" 1;
+  letter-spacing: -0.015em;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variation-settings: "SOFT" 0, "WONK" 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Cevap içindeki [1] işareti: üstsimge, tıklanabilir */
