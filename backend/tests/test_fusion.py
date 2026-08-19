@@ -116,6 +116,78 @@ def test_k_controls_how_much_top_ranks_dominate():
     )[0]["score"]
 
 
+# --- Ağırlıklandırma --------------------------------------------------------
+
+
+def test_weights_default_to_one_each():
+    assert reciprocal_rank_fusion([_ranking(1, 2)]) == reciprocal_rank_fusion(
+        [_ranking(1, 2)], [1.0]
+    )
+
+
+def test_a_weight_scales_that_ranking_contribution():
+    [top] = reciprocal_rank_fusion([_ranking(7)], [0.5])
+    assert top["score"] == pytest.approx(0.5 / (RRF_K + 1), abs=ROUNDING)
+
+
+def test_a_zero_weight_ignores_a_ranking_but_keeps_its_chunks():
+    fused = reciprocal_rank_fusion([_ranking(1), _ranking(2)], [1.0, 0.0])
+    assert _ids(fused) == [1, 2]
+    assert fused[1]["score"] == 0.0
+
+
+def test_mismatched_weight_count_is_rejected():
+    with pytest.raises(ValueError, match="one entry per ranking"):
+        reciprocal_rank_fusion([_ranking(1), _ranking(2)], [1.0])
+
+
+def test_weighting_rescues_a_result_only_the_dense_search_found():
+    """The exact man016 failure: dense rank 6, absent from BM25's top 20.
+
+    Unweighted, the chunk scores 1/66 = 0.01515 while BM25's ranks 1-5 score
+    1/61 to 1/65, so five keyword-only chunks plus dense's own top five push
+    it to rank 11 -- out of the top 10. Weighting the keyword side at 0.5
+    caps its best contribution at 0.5/61 = 0.00820, below the chunk's own
+    0.01515, so relevance decides the order instead of arithmetic.
+    """
+    wanted = 3808
+    dense = _ranking(101, 102, 103, 104, 105, wanted, 107, 108, 109, 110)
+    keyword = _ranking(*range(201, 221))
+
+    unweighted = reciprocal_rank_fusion([dense, keyword])
+    weighted = reciprocal_rank_fusion([dense, keyword], [1.0, 0.5])
+
+    # Dense'in ilk beşi ve BM25'in ilk altısı önüne geçiyor: 12. sıra.
+    # Gerçek man016 çalışmasında da birleşik sıra tam olarak 12 çıkmıştı.
+    assert _ids(unweighted).index(wanted) + 1 == 12
+    assert _ids(weighted).index(wanted) + 1 == 6
+
+    # Sayısal olarak: 1.0/66 > 0.5/61
+    dense_only = 1.0 / (RRF_K + 6)
+    best_keyword_only = 0.5 / (RRF_K + 1)
+    assert dense_only > best_keyword_only
+    assert dense_only == pytest.approx(0.015152, abs=ROUNDING)
+    assert best_keyword_only == pytest.approx(0.008197, abs=ROUNDING)
+
+
+def test_the_unweighted_case_is_genuinely_broken():
+    # Ağırlıksız hâlde BM25'in ilk beşi dense'in 6. sırasını gerçekten geçiyor
+    assert 1.0 / (RRF_K + 5) > 1.0 / (RRF_K + 6)
+
+
+def test_a_chunk_both_searches_find_still_outranks_a_dense_only_one():
+    # Ağırlıklandırma, uzlaşmayı ödüllendirmeyi bozmamalı
+    dense = _ranking(1, 2, 3, 4, 5, 6)
+    keyword = _ranking(6, 7, 8)
+    fused = reciprocal_rank_fusion([dense, keyword], [1.0, 0.5])
+    # 6: dense 6. + bm25 1. -> 1/66 + 0.5/61 = 0.02335, 1'in 1/61=0.01639'undan büyük
+    assert _ids(fused)[0] == 6
+
+
+def test_weights_do_not_change_a_single_ranking_order():
+    assert _ids(reciprocal_rank_fusion([_ranking(5, 6, 7)], [0.3])) == [5, 6, 7]
+
+
 # --- retrieve() kip seçimi --------------------------------------------------
 
 
