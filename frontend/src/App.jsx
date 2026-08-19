@@ -4,10 +4,14 @@ import { parseCitations } from "./citations";
 import { relativeTime, sessionLabel, toChatMessages } from "./sessions";
 
 const SUGGESTED_QUESTIONS = [
-  "Bu doküman ne hakkında?",
-  "En önemli bulgular neler?",
-  "Which model performed best on FD001?",
+  "İşten çıkarılan işçi kaç gün içinde dava açabilir?",
+  "KVKK'da açık rıza nedir?",
+  "Limited şirket kurmak için en az kaç ortak gerekir?",
 ];
+
+// Başlık cevaptan sonra arka planda üretiliyor; ilk tazeleme onu henüz
+// yakalayamaz, bu yüzden kısa bir gecikmeyle bir kez daha bakılıyor
+const TITLE_SETTLE_MS = 2000;
 
 function AnswerText({ text, sourceCount, onCite }) {
   const parts = parseCitations(text, sourceCount);
@@ -168,8 +172,11 @@ export default function App() {
         sessionId
       );
       updateLast((m) => ({ ...m, streaming: false }));
-      // Başlık arka planda yazılıyor; cevap bitince listeyi tazele
-      if (activeSession) refreshSessions();
+      if (activeSession) {
+        // İlk tazeleme mesaj sayısını ve sırayı günceller, ikincisi başlığı
+        refreshSessions();
+        window.setTimeout(refreshSessions, TITLE_SETTLE_MS);
+      }
     } catch (err) {
       updateLast((m) => ({
         ...m,
