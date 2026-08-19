@@ -180,6 +180,56 @@ python -m eval.run --k 10 --label baseline --per-question
 
 Prints a report and writes `eval/results/<timestamp>-baseline.json`.
 
+## Where retrieval ended up
+
+Three changes were measured against the 59-question golden set, each against
+the one before it. All numbers are k=10, and every run is kept under
+`eval/results/`.
+
+| | Hit@1 | Hit@3 | Hit@5 | Hit@10 | MRR@10 | Recall@1 | Recall@5 | avg ms | p95 ms |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| dense only | 0.475 | 0.746 | 0.848 | 0.932 | 0.628 | 0.381 | 0.799 | 40 | 46 |
+| + hybrid (w=0.95) | 0.576 | 0.763 | 0.864 | **0.983** | 0.695 | 0.458 | 0.784 | 42 | 49 |
+| **+ rerank (10)** | **0.729** | **0.864** | **0.949** | 0.983 | **0.816** | **0.606** | **0.887** | 275 | 329 |
+
+Hit@1 went 0.475 → 0.729 and MRR@10 0.628 → 0.816, at roughly seven times the
+latency. Reranking is much the largest single gain; hybrid search on its own
+mostly moved results already in the top ten into better positions.
+
+Split by question type, the gains hold in both, and reranking helps most on
+questions phrased the way a user would phrase them:
+
+| Subset | | Hit@1 | Hit@3 | Hit@10 | MRR@10 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `man*` (user wording) | dense | 0.320 | 0.680 | 1.000 | 0.542 |
+| | hybrid | 0.440 | 0.680 | 0.960 | 0.590 |
+| | + rerank | **0.600** | **0.800** | 0.960 | **0.720** |
+| `gen*` (document wording) | dense | 0.655 | 0.828 | 0.862 | 0.734 |
+| | hybrid | 0.759 | 0.897 | 1.000 | 0.833 |
+| | + rerank | **0.862** | **0.931** | **1.000** | **0.912** |
+
+### Why the shortlist is 10 and not 20
+
+The reranker was first run over a 20-candidate shortlist. Cutting it to 10
+halves the cost and loses almost nothing:
+
+| shortlist | Hit@1 | Hit@3 | Hit@5 | Hit@10 | MRR@10 | avg ms | p95 ms |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 0.729 | 0.848 | 0.915 | **1.000** | 0.814 | 552 | 694 |
+| **10** | 0.729 | **0.864** | **0.949** | 0.983 | **0.816** | **275** | **329** |
+
+Hit@1 is identical and MRR is level, while Hit@3 and Hit@5 improve — of the
+ten questions whose rank moved, eight improved. Scoring fewer candidates
+appears to help the cross-encoder about as much as it costs, presumably
+because there is less for a plausible-but-wrong chunk to win against.
+
+The one loss is structural rather than incidental. With the shortlist and `k`
+both at 10 the reranker can only reorder what hybrid already returned, so
+anything hybrid ranked 11th or worse is unreachable. `man031` is the only
+question in that position, and it accounts for the entire Hit@10 drop from
+1.000 to 0.983. Buying it back costs about 276 ms per query, which is why the
+shortlist stayed at 10.
+
 ## Choosing the keyword weight
 
 Retrieval fuses embedding and keyword results with weighted RRF. The
