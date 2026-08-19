@@ -37,6 +37,64 @@ function AnswerText({ text, sourceCount, onCite }) {
   );
 }
 
+function IconChat({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20 12a7.5 7.5 0 0 1-7.5 7.5H8l-4 3v-3.6A7.5 7.5 0 1 1 20 12Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconLibrary({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 4h5.5v16H5zM13 4h3.2l3 16H16z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M5 8.5h5.5M13.6 8.8h3.6" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function IconPlus({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** One button in the left rail. */
+function RailButton({ label, active, onClick, disabled, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-40 ${
+        active
+          ? "bg-ink-800 text-brass-400 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
+          : "text-mist hover:bg-ink-800/60 hover:text-paper"
+      }`}
+    >
+      {active && (
+        <span className="absolute -left-3 h-5 w-[3px] rounded-r-full bg-brass-500" />
+      )}
+      {children}
+    </button>
+  );
+}
+
 function SealLogo({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
@@ -77,6 +135,8 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
+  // Sol panel iki görünüm arasında geçiş yapıyor: sohbetler ve dokümanlar
+  const [panel, setPanel] = useState("chats");
 
   const focusSource = (messageIndex, sourceIndex) => {
     const key = `${messageIndex}:${sourceIndex}`;
@@ -242,152 +302,192 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-ink-950 text-paper">
-      {/* Sol panel — doküman yönetimi */}
-      <aside className="w-80 shrink-0 border-r border-ink-800 bg-ink-900 p-4 flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <SealLogo size={38} />
-          <div>
-            <h1 className="font-display text-xl font-semibold tracking-tight">
-              KOBİ RAG
-            </h1>
-            <p className="text-xs text-mist">Yerel doküman asistanı</p>
-          </div>
-        </div>
+      {/* Sol şerit — marka ve panel seçimi */}
+      <nav className="z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r border-ink-800 bg-ink-950 py-5 shadow-[var(--shadow-rail)]">
+        <SealLogo size={34} />
 
-        {/* Sohbet geçmişi */}
-        <div className="flex min-h-0 flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-faint">
-              Sohbetler
-            </p>
-            <button
-              onClick={handleNewChat}
-              disabled={asking}
-              className="rounded px-2 py-0.5 text-xs text-brass-400 transition hover:bg-ink-800 disabled:opacity-50"
-            >
-              + Yeni
-            </button>
-          </div>
-
-          {sessions.length === 0 ? (
-            <p className="text-xs text-faint">Henüz sohbet yok.</p>
-          ) : (
-            <div className="flex max-h-56 flex-col gap-1 overflow-y-auto pr-1">
-              {sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className={`group flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition ${
-                    session.id === sessionId
-                      ? "border-brass-500/70 bg-ink-800/80"
-                      : "border-transparent hover:bg-ink-800/50"
-                  }`}
-                >
-                  <button
-                    onClick={() => handleOpenSession(session.id)}
-                    disabled={asking || loadingSession}
-                    className="min-w-0 flex-1 text-left disabled:opacity-50"
-                  >
-                    <p
-                      className={`truncate text-xs ${
-                        session.id === sessionId ? "text-brass-400" : "text-paper"
-                      }`}
-                    >
-                      {sessionLabel(session)}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-faint">
-                      {relativeTime(session.updated_at)}
-                    </p>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSession(session.id)}
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] transition ${
-                      confirmDeleteSession === session.id
-                        ? "bg-red-950/70 text-red-300"
-                        : "text-faint opacity-0 hover:text-red-300 group-hover:opacity-100"
-                    }`}
-                  >
-                    {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-ink-800" />
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.txt"
-          className="hidden"
-          onChange={handleFileSelected}
-        />
         <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="rounded-lg border border-dashed border-ink-700 p-6 text-sm text-mist transition hover:border-brass-500 hover:text-brass-400 disabled:opacity-50"
+          onClick={handleNewChat}
+          disabled={asking}
+          title="Yeni sohbet"
+          aria-label="Yeni sohbet"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-brass-500/40 text-brass-400 transition-all duration-200 hover:border-brass-500 hover:bg-brass-500/10 disabled:opacity-40"
         >
-          {uploading ? "İşleniyor... (parçalanıyor ve vektörleniyor)" : "PDF / TXT yükle"}
+          <IconPlus />
         </button>
 
+        <div className="flex flex-col items-center gap-2">
+          <RailButton
+            label="Sohbetler"
+            active={panel === "chats"}
+            onClick={() => setPanel("chats")}
+          >
+            <IconChat />
+          </RailButton>
+          <RailButton
+            label="Dokümanlar"
+            active={panel === "docs"}
+            onClick={() => setPanel("docs")}
+          >
+            <IconLibrary />
+          </RailButton>
+        </div>
+
+        <p className="mt-auto text-[9px] uppercase tracking-[0.2em] text-faint [writing-mode:vertical-rl]">
+          yerel
+        </p>
+      </nav>
+
+      {/* Orta panel — seçili görünümün içeriği */}
+      <aside className="z-10 flex w-[19rem] shrink-0 flex-col border-r border-ink-800 bg-ink-900 shadow-[var(--shadow-panel)]">
+        <header className="flex items-baseline justify-between border-b border-ink-800/80 px-5 py-5">
+          <h2 className="panel-title text-[13px] text-paper">
+            {panel === "chats" ? "Sohbetler" : "Dokümanlar"}
+          </h2>
+          <span className="text-[11px] text-faint">
+            {panel === "chats" ? sessions.length : documents.length}
+          </span>
+        </header>
+
         {error && (
-          <div className="rounded-lg bg-red-950/60 border border-red-900 px-3 py-2 text-xs text-red-300">
+          <div className="mx-5 mt-4 rounded-lg border border-red-900/80 bg-red-950/50 px-3 py-2 text-xs text-red-300">
             {error}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto">
-          {documents.length === 0 ? (
-            <p className="text-sm text-faint">Henüz doküman yok</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {documents.map((doc) => (
-                <li
-                  key={doc.source}
-                  className="group flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">{doc.source}</p>
-                    <p className="text-xs text-faint">{doc.chunks} parça</p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(doc.source)}
-                    onMouseLeave={() =>
-                      setConfirmDelete((c) => (c === doc.source ? null : c))
-                    }
-                    className={`ml-2 shrink-0 rounded px-2 py-1 text-xs transition ${
-                      confirmDelete === doc.source
-                        ? "bg-red-950 text-red-300 opacity-100"
-                        : "text-faint opacity-0 group-hover:opacity-100 hover:bg-red-950 hover:text-red-300"
-                    }`}
-                  >
-                    {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {panel === "chats" ? (
+          <div className="flex-1 overflow-y-auto px-3 py-4">
+            {sessions.length === 0 ? (
+              <p className="px-2 text-xs leading-relaxed text-faint">
+                Henüz sohbet yok. Bir soru sorduğunuzda burada birikir.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {sessions.map((session) => (
+                  <li key={session.id}>
+                    <div
+                      className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-all duration-200 ${
+                        session.id === sessionId
+                          ? "border-brass-500/50 bg-ink-800 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]"
+                          : "border-transparent hover:border-ink-700/70 hover:bg-ink-800/50"
+                      }`}
+                    >
+                      {session.id === sessionId && (
+                        <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-brass-500" />
+                      )}
+                      <button
+                        onClick={() => handleOpenSession(session.id)}
+                        disabled={asking || loadingSession}
+                        className="min-w-0 flex-1 text-left disabled:opacity-50"
+                      >
+                        <p
+                          className={`truncate text-[13px] font-medium leading-snug ${
+                            session.id === sessionId ? "text-brass-400" : "text-paper"
+                          }`}
+                        >
+                          {sessionLabel(session)}
+                        </p>
+                        <p className="mt-1 text-[11px] text-faint">
+                          {relativeTime(session.updated_at)}
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSession(session.id)}
+                        onMouseLeave={() =>
+                          setConfirmDeleteSession((c) => (c === session.id ? null : c))
+                        }
+                        className={`shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
+                          confirmDeleteSession === session.id
+                            ? "bg-red-950 text-red-300 opacity-100"
+                            : "text-faint opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
+                        }`}
+                      >
+                        {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="px-5 pt-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt"
+                className="hidden"
+                onChange={handleFileSelected}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full rounded-xl border border-dashed border-ink-700 px-4 py-5 text-xs leading-relaxed text-mist transition-all duration-200 hover:border-brass-500 hover:bg-brass-500/5 hover:text-brass-400 disabled:opacity-50"
+              >
+                {uploading ? "İşleniyor..." : "PDF / TXT yükle"}
+              </button>
+            </div>
 
-        <p className="text-[11px] leading-relaxed text-faint">
-          Dokümanlarınız bu makineden çıkmaz — arama ve cevaplama tamamen yerel
-          çalışır.
-        </p>
+            <div className="flex-1 overflow-y-auto px-3 py-4">
+              {documents.length === 0 ? (
+                <p className="px-2 text-xs text-faint">Henüz doküman yok.</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {documents.map((doc) => (
+                    <li
+                      key={doc.source}
+                      className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition-all duration-200 hover:border-ink-700/70 hover:bg-ink-800/50"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] leading-snug text-paper">
+                          {doc.source}
+                        </p>
+                        <p className="mt-1 text-[11px] text-faint">{doc.chunks} parça</p>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(doc.source)}
+                        onMouseLeave={() =>
+                          setConfirmDelete((c) => (c === doc.source ? null : c))
+                        }
+                        className={`ml-2 shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
+                          confirmDelete === doc.source
+                            ? "bg-red-950 text-red-300 opacity-100"
+                            : "text-faint opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
+                        }`}
+                      >
+                        {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <p className="border-t border-ink-800/80 px-5 py-4 text-[11px] leading-relaxed text-faint">
+              Dokümanlarınız bu makineden çıkmaz — arama ve cevaplama tamamen
+              yerel çalışır.
+            </p>
+          </div>
+        )}
       </aside>
 
       {/* Sağ panel — sohbet */}
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col bg-ink-950">
         {messages.length > 0 && (
-          <div className="flex justify-end border-b border-ink-800 px-4 py-2">
-            <button
-              onClick={handleNewChat}
-              disabled={asking}
-              className="rounded px-2.5 py-1 text-xs text-faint transition hover:bg-ink-800 hover:text-mist disabled:opacity-50"
-            >
-              Yeni sohbet
-            </button>
-          </div>
+          <header className="flex items-center justify-between gap-4 border-b border-ink-800 px-8 py-4">
+            <div className="min-w-0">
+              <h2 className="truncate font-display text-base font-semibold text-paper">
+                {sessionLabel(sessions.find((s) => s.id === sessionId))}
+              </h2>
+              <p className="mt-0.5 text-[11px] text-faint">
+                {documents.length} doküman üzerinde arama yapılıyor
+              </p>
+            </div>
+            {loadingSession && (
+              <span className="shrink-0 text-[11px] text-faint">Yükleniyor...</span>
+            )}
+          </header>
         )}
         <div className="flex-1 overflow-y-auto p-6">
           {messages.length === 0 ? (
