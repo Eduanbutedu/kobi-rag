@@ -210,8 +210,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--rerank",
-        action="store_true",
-        help="re-score the shortlist with the cross-encoder",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="re-score the shortlist with the cross-encoder (--no-rerank to measure without)",
     )
     parser.add_argument("--per-question", action="store_true", help="print each question's rank")
     parser.add_argument("--no-save", action="store_true", help="print only, write no JSON")
