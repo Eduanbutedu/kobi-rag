@@ -14,6 +14,7 @@ import sqlite_vec
 from sqlite_vec import serialize_float32
 
 from rag.embedding import EMBEDDING_DIM
+from rag.stopwords_tr import is_stopword
 
 # FTS5 şeması eklendiğinde artırılır; eski veritabanları açılışta yükseltilir
 SCHEMA_VERSION = 1
@@ -179,11 +180,18 @@ class DocumentStore:
 
     @staticmethod
     def _match_expression(query: str) -> str:
-        """Turn a free-text question into a safe FTS5 MATCH expression."""
+        """Turn a free-text question into a safe FTS5 MATCH expression.
+
+        Function words are dropped, because OR'ed terms let a chunk qualify
+        on "içinde" alone. If the question is nothing but function words the
+        unfiltered terms are used instead -- a worse query still beats no
+        query at all.
+        """
         terms = [t for t in _WORD.findall(query) if len(t) >= MIN_TERM_CHARS]
+        content_terms = [t for t in terms if not is_stopword(t)]
         # Her terim tırnak içinde: sorgudaki tırnak, yıldız, tire gibi
         # işaretler FTS5 söz dizimi olarak yorumlanmasın
-        return " OR ".join(f'"{term}"' for term in terms)
+        return " OR ".join(f'"{term}"' for term in content_terms or terms)
 
     def all_chunks(self) -> list[dict]:
         """Return every stored chunk: [{id, source, text}, ...] ordered by id."""
