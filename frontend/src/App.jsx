@@ -369,29 +369,28 @@ export default function App() {
                 {sessions.map((session) => (
                   <li key={session.id}>
                     <div
-                      className={`group relative flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-all duration-200 ${
+                      className={`group relative rounded-xl border px-3.5 py-3 transition-all duration-200 ${
                         session.id === sessionId
-                          ? "border-accent-500/50 bg-surface-800 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]"
-                          : "border-transparent hover:border-surface-700/70 hover:bg-surface-800/50"
+                          ? "border-accent-500/60 bg-accent-500/10 shadow-[var(--shadow-card-raised)]"
+                          : "border-surface-700/60 bg-surface-800/60 shadow-[var(--shadow-card)] hover:border-surface-700 hover:bg-surface-800"
                       }`}
                     >
-                      {session.id === sessionId && (
-                        <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-accent-500" />
-                      )}
                       <button
                         onClick={() => handleOpenSession(session.id)}
                         disabled={asking || loadingSession}
-                        className="min-w-0 flex-1 text-left disabled:opacity-50"
+                        className="block w-full text-left disabled:opacity-50"
                       >
                         <p
-                          className={`truncate text-[13px] font-medium leading-snug ${
+                          className={`truncate pr-6 text-[13px] font-medium leading-snug ${
                             session.id === sessionId ? "text-accent-400" : "text-content"
                           }`}
                         >
                           {sessionLabel(session)}
                         </p>
-                        <p className="mt-1 text-[11px] text-subtle">
-                          {relativeTime(session.updated_at)}
+                        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-subtle">
+                          <span>{session.message_count} mesaj</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{relativeTime(session.updated_at)}</span>
                         </p>
                       </button>
                       <button
@@ -399,10 +398,10 @@ export default function App() {
                         onMouseLeave={() =>
                           setConfirmDeleteSession((c) => (c === session.id ? null : c))
                         }
-                        className={`shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
+                        className={`absolute right-2 top-2 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
                           confirmDeleteSession === session.id
-                            ? "bg-red-950 text-red-300 opacity-100"
-                            : "text-subtle opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
+                            ? "bg-red-500/15 text-red-300 opacity-100"
+                            : "text-subtle opacity-0 hover:bg-red-500/15 hover:text-red-300 group-hover:opacity-100"
                         }`}
                       >
                         {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
@@ -480,7 +479,7 @@ export default function App() {
         {messages.length > 0 && (
           <header className="flex items-center justify-between gap-4 border-b border-surface-800 px-8 py-4">
             <div className="min-w-0">
-              <h2 className="truncate font-display text-base font-semibold text-content">
+              <h2 className="truncate text-[15px] font-semibold text-content">
                 {sessionLabel(sessions.find((s) => s.id === sessionId))}
               </h2>
               <p className="mt-0.5 text-[11px] text-subtle">
@@ -492,12 +491,12 @@ export default function App() {
             )}
           </header>
         )}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-6 py-8">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5">
               <Mark />
               <div className="text-center">
-                <p className="font-display text-lg text-content">
+                <p className="text-lg font-semibold text-content">
                   Dokümanlarınıza sorun
                 </p>
                 <p className="mt-1 text-sm text-subtle">
@@ -510,7 +509,7 @@ export default function App() {
                     <button
                       key={q}
                       onClick={() => handleAsk(q)}
-                      className="rounded-full border border-surface-700 bg-surface-850 px-4 py-2 text-xs text-muted transition hover:border-accent-500 hover:text-accent-400"
+                      className="rounded-full border border-surface-700 bg-surface-850 px-4 py-2 text-xs text-muted shadow-[var(--shadow-card)] transition-all duration-200 hover:border-accent-500/60 hover:bg-surface-800 hover:text-content"
                     >
                       {q}
                     </button>
@@ -519,21 +518,21 @@ export default function App() {
               )}
             </div>
           ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-4">
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
               {messages.map((msg, i) =>
                 msg.role === "user" ? (
                   <div key={i} className="msg-enter self-end max-w-[80%]">
-                    <div className="rounded-2xl rounded-br-sm bg-accent-500 px-4 py-2.5 text-sm font-medium text-surface-950">
+                    <div className="rounded-2xl rounded-br-md bg-accent-500 px-4 py-2.5 text-sm leading-relaxed text-white shadow-[var(--shadow-card)]">
                       {msg.content}
                     </div>
                   </div>
                 ) : (
                   <div key={i} className="msg-enter self-start w-full max-w-[90%]">
                     <div
-                      className={`rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                      className={`whitespace-pre-wrap rounded-2xl rounded-bl-md border px-4 py-3 text-sm leading-relaxed shadow-[var(--shadow-card)] ${
                         msg.isError
-                          ? "bg-red-950/60 border border-red-900 text-red-300"
-                          : "bg-surface-800/80"
+                          ? "border-red-500/30 bg-red-500/10 text-red-300"
+                          : "border-surface-700/60 bg-surface-800 text-content"
                       }`}
                     >
                       {msg.content ? (
@@ -550,27 +549,25 @@ export default function App() {
                       )}
                     </div>
                     {msg.sources?.length > 0 && (
-                      <div className="mt-2 flex flex-col gap-2">
-                        <p className="text-xs font-medium text-subtle">
-                          Kaynaklar
-                        </p>
+                      <div className="mt-3 flex flex-col gap-2">
+                        <p className="panel-title text-subtle">Kaynaklar</p>
                         {msg.sources.map((src, j) => (
                           <div
                             key={j}
                             ref={(el) => {
                               sourceRefs.current[`${i}:${j}`] = el;
                             }}
-                            className={`flex items-start gap-3 rounded-lg border bg-surface-850/60 px-3 py-2.5 transition-colors duration-500 ${
+                            className={`flex items-start gap-3 rounded-xl border bg-surface-850 px-3.5 py-3 shadow-[var(--shadow-card)] transition-colors duration-500 ${
                               highlighted === `${i}:${j}`
                                 ? "source-flash border-accent-500"
-                                : "border-surface-800"
+                                : "border-surface-700/50"
                             }`}
                           >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-accent-500/70 text-xs font-medium text-accent-400">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-500/15 text-[11px] font-semibold text-accent-400">
                               {j + 1}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate text-xs font-medium text-accent-400">
+                              <p className="truncate text-xs font-medium text-muted">
                                 {src.source}
                               </p>
                               <p className="mt-1 line-clamp-3 text-xs text-subtle">
@@ -601,7 +598,7 @@ export default function App() {
             <button
               onClick={() => handleAsk()}
               disabled={asking || !question.trim()}
-              className="rounded-lg bg-accent-500 px-4 py-2.5 text-sm font-medium text-surface-950 transition hover:bg-accent-400 disabled:opacity-50 disabled:hover:bg-accent-500"
+              className="rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-accent-400 disabled:opacity-40 disabled:hover:bg-accent-500"
             >
               {asking ? "..." : "Sor"}
             </button>
