@@ -145,12 +145,25 @@ def store(monkeypatch):
     return _FakeStore()
 
 
-def test_retrieve_does_not_rerank_by_default(store, monkeypatch):
+def test_retrieve_reranks_by_default(store, monkeypatch):
+    """Reranking is the application's normal behaviour, not an opt-in."""
+    called = []
+
+    def _rerank(query, candidates, top_k):
+        called.append(top_k)
+        return list(candidates)[:top_k]
+
+    monkeypatch.setattr("rag.service.rerank_candidates", _rerank)
+    assert len(retrieve(store, "soru", k=10, mode=HYBRID)) == 10
+    assert called == [10]
+
+
+def test_reranking_can_be_switched_off(store, monkeypatch):
     def _boom(*args, **kwargs):
-        raise AssertionError("rerank should not run unless asked")
+        raise AssertionError("rerank should not run when disabled")
 
     monkeypatch.setattr("rag.service.rerank_candidates", _boom)
-    assert len(retrieve(store, "soru", k=10, mode=HYBRID)) == 10
+    assert len(retrieve(store, "soru", k=10, mode=HYBRID, rerank=False)) == 10
 
 
 def test_retrieve_reranks_the_shortlist_down_to_k(store, monkeypatch):

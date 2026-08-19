@@ -224,7 +224,7 @@ def fake_store(monkeypatch):
 
 
 def test_dense_mode_does_not_touch_the_keyword_index(fake_store):
-    results = retrieve(fake_store, "soru", k=2, mode=DENSE)
+    results = retrieve(fake_store, "soru", k=2, mode=DENSE, rerank=False)
     assert fake_store.bm25_k is None
     assert fake_store.search_k == 2
     # k'ya kırpma retrieve içinde de yapılıyor; store'un k'yı dinlemesine
@@ -233,25 +233,25 @@ def test_dense_mode_does_not_touch_the_keyword_index(fake_store):
 
 
 def test_hybrid_mode_merges_both_and_cuts_to_k(fake_store):
-    results = retrieve(fake_store, "soru", k=3, mode=HYBRID)
+    results = retrieve(fake_store, "soru", k=3, mode=HYBRID, rerank=False)
     # 3 iki listede de var, en üstte olmalı
     assert _ids(results)[0] == 3
     assert len(results) == 3
 
 
 def test_hybrid_pulls_more_candidates_than_it_returns(fake_store):
-    retrieve(fake_store, "soru", k=3, mode=HYBRID)
+    retrieve(fake_store, "soru", k=3, mode=HYBRID, rerank=False)
     assert fake_store.search_k == 20
     assert fake_store.bm25_k == 20
 
 
 def test_keyword_side_sees_the_raw_question(fake_store):
-    retrieve(fake_store, "yıllık izin kaç gün", k=3, mode=HYBRID)
+    retrieve(fake_store, "yıllık izin kaç gün", k=3, mode=HYBRID, rerank=False)
     assert fake_store.bm25_query == "yıllık izin kaç gün"
 
 
 def test_hybrid_is_the_default(fake_store):
-    assert _ids(retrieve(fake_store, "soru", k=3))[0] == 3
+    assert _ids(retrieve(fake_store, "soru", k=3, rerank=False))[0] == 3
 
 
 def test_retrieve_passes_the_measured_default_weights(fake_store, monkeypatch):
@@ -268,7 +268,7 @@ def test_retrieve_passes_the_measured_default_weights(fake_store, monkeypatch):
         return rankings[0]
 
     monkeypatch.setattr("rag.service.reciprocal_rank_fusion", _fusion)
-    retrieve(fake_store, "soru", k=3)
+    retrieve(fake_store, "soru", k=3, rerank=False)
 
     assert captured["weights"] == [DENSE_WEIGHT, BM25_WEIGHT]
     assert (DENSE_WEIGHT, BM25_WEIGHT) == (1.0, 0.95)
@@ -282,11 +282,11 @@ def test_the_weights_are_overridable_per_call(fake_store, monkeypatch):
         return rankings[0]
 
     monkeypatch.setattr("rag.service.reciprocal_rank_fusion", _fusion)
-    retrieve(fake_store, "soru", k=3, dense_weight=1.0, bm25_weight=0.5)
+    retrieve(fake_store, "soru", k=3, dense_weight=1.0, bm25_weight=0.5, rerank=False)
 
     assert captured["weights"] == [1.0, 0.5]
 
 
 def test_an_unknown_mode_is_rejected(fake_store):
     with pytest.raises(ValueError, match="unknown retrieval mode"):
-        retrieve(fake_store, "soru", k=3, mode="sparse")
+        retrieve(fake_store, "soru", k=3, mode="sparse", rerank=False)
