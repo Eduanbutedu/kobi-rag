@@ -1,30 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  /* Zemin katmanları: en koyu şerit, üstüne panel, en üstte kartlar.
-     Aralarındaki fark bilerek küçük; derinlik renkten değil katmandan geliyor. */
-  --color-surface-950: #08090d;
-  --color-surface-900: #0c0e14;
-  --color-surface-850: #11141c;
-  --color-surface-800: #171b25;
-  --color-surface-700: #232936;
+  /* Katmanlar. Aralarındaki fark gözle seçilecek kadar açık: en dışta zemin,
+     üstünde şerit, sonra panel, en üstte kartlar. Hiçbiri saf siyah değil. */
+  --color-surface-950: #0a0a0c;
+  --color-surface-900: #0d0d10;
+  --color-surface-850: #141418;
+  --color-surface-800: #1a1a20;
+  --color-surface-750: #21212a;
+  --color-surface-700: #2a2a35;
 
-  --color-content: #e7e9ee;
-  --color-muted: #9198a8;
-  --color-subtle: #646b7c;
+  --color-content: #ecedf1;
+  --color-muted: #9ba1b0;
+  --color-subtle: #6b7180;
 
-  /* Vurgu yalnızca aktif durumlar, birincil butonlar ve kullanıcı balonları
-     için. İkon ya da avatar renklendirmesinde kullanılmıyor. */
+  /* Vurgu yalnızca aktif durum, birincil buton, çip ve odak halkası için. */
   --color-accent-600: #4f46e5;
   --color-accent-500: #6366f1;
   --color-accent-400: #818cf8;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --shadow-panel: 1px 0 0 rgb(255 255 255 / 0.03), 0 8px 32px rgb(0 0 0 / 0.4);
-  --shadow-rail: 4px 0 16px rgb(0 0 0 / 0.45);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-card-raised: 0 4px 16px rgb(0 0 0 / 0.45);
+  /* Gölgeler geniş yayılımlı ve düşük opaklıkta; sert kenar yok. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25), 0 4px 16px rgb(0 0 0 / 0.22);
+  --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.3), 0 12px 28px rgb(0 0 0 / 0.3);
+  --shadow-card-active: 0 2px 6px rgb(0 0 0 / 0.3), 0 12px 32px rgb(79 70 229 / 0.18);
+  --shadow-panel: 1px 0 0 rgb(255 255 255 / 0.04), 8px 0 32px rgb(0 0 0 / 0.45);
+  --shadow-rail: 4px 0 20px rgb(0 0 0 / 0.5);
+  --shadow-glow: 0 0 70px 12px rgb(99 102 241 / 0.22);
 }
 
 html {
@@ -52,6 +55,59 @@ html {
 
 .msg-enter {
   animation: rise 150ms ease-out;
+}
+
+/* Kart yüzeyi: yumuşak gölge, yuvarlak köşe, hover'da bir piksel yükselme.
+   translateY tek başına yeterince ince; parlaklık da hafifçe artıyor. */
+.card {
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.card-active {
+  box-shadow: var(--shadow-card-active);
+}
+
+.card-active:hover {
+  transform: translateY(-1px);
+}
+
+/* Boş ekrandaki marka işaretinin arkasındaki yumuşak parıltı */
+.mark-glow {
+  position: relative;
+}
+
+.mark-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: var(--shadow-glow);
+  pointer-events: none;
+}
+
+/* Metin girişi odaklanınca vurgu halkası */
+.composer-input {
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease;
+}
+
+.composer-input:focus {
+  outline: none;
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
 }
 
 /* Marka ve panel başlıkları gövdeyle aynı aileden; ayrım yalnızca ağırlık,
@@ -140,5 +196,12 @@ html {
   .caret,
   .source-flash {
     animation: none;
+  }
+
+  .card,
+  .card:hover,
+  .card-active:hover {
+    transform: none;
+    transition: none;
   }
 }

@@ -306,7 +306,7 @@ export default function App() {
   return (
     <div className="flex h-screen bg-surface-950 text-content">
       {/* Sol şerit — marka ve panel seçimi */}
-      <nav className="z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r border-surface-800 bg-surface-950 py-5 shadow-[var(--shadow-rail)]">
+      <nav className="z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r border-surface-800/60 bg-surface-900 py-5 shadow-[var(--shadow-rail)]">
         <Mark size={34} />
 
         <button
@@ -314,7 +314,7 @@ export default function App() {
           disabled={asking}
           title="Yeni sohbet"
           aria-label="Yeni sohbet"
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-accent-500/40 text-accent-400 transition-all duration-200 hover:border-accent-500 hover:bg-accent-500/10 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-accent-500/40 bg-accent-500/5 text-accent-400 transition-all duration-200 hover:-translate-y-px hover:border-accent-500 hover:bg-accent-500/15 hover:shadow-[var(--shadow-card-active)] disabled:opacity-40"
         >
           <IconPlus />
         </button>
@@ -342,7 +342,7 @@ export default function App() {
       </nav>
 
       {/* Orta panel — seçili görünümün içeriği */}
-      <aside className="z-10 flex w-[19rem] shrink-0 flex-col border-r border-surface-800 bg-surface-850 shadow-[var(--shadow-panel)]">
+      <aside className="z-10 flex w-[19rem] shrink-0 flex-col border-r border-surface-800/60 bg-surface-850 shadow-[var(--shadow-panel)]">
         <header className="flex items-baseline justify-between border-b border-surface-800/80 px-5 py-5">
           <h2 className="panel-title text-[13px] text-content">
             {panel === "chats" ? "Sohbetler" : "Dokümanlar"}
@@ -365,14 +365,14 @@ export default function App() {
                 Henüz sohbet yok. Bir soru sorduğunuzda burada birikir.
               </p>
             ) : (
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex flex-col gap-2.5">
                 {sessions.map((session) => (
                   <li key={session.id}>
                     <div
-                      className={`group relative rounded-xl border px-3.5 py-3 transition-all duration-200 ${
+                      className={`card group relative border px-3.5 py-3 ${
                         session.id === sessionId
-                          ? "border-accent-500/60 bg-accent-500/10 shadow-[var(--shadow-card-raised)]"
-                          : "border-surface-700/60 bg-surface-800/60 shadow-[var(--shadow-card)] hover:border-surface-700 hover:bg-surface-800"
+                          ? "card-active border-accent-500/70 bg-accent-500/10"
+                          : "border-surface-700/50 bg-surface-800 hover:border-surface-700 hover:bg-surface-750"
                       }`}
                     >
                       <button
@@ -425,7 +425,7 @@ export default function App() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-full rounded-xl border border-dashed border-surface-700 px-4 py-5 text-xs leading-relaxed text-muted transition-all duration-200 hover:border-accent-500 hover:bg-accent-500/5 hover:text-accent-400 disabled:opacity-50"
+                className="w-full rounded-xl border border-dashed border-surface-700 px-4 py-5 text-xs leading-relaxed text-muted transition-all duration-200 hover:border-accent-500 hover:bg-accent-500/10 hover:text-accent-400 disabled:opacity-50"
               >
                 {uploading ? "İşleniyor..." : "PDF / TXT yükle"}
               </button>
@@ -435,11 +435,11 @@ export default function App() {
               {documents.length === 0 ? (
                 <p className="px-2 text-xs text-subtle">Henüz doküman yok.</p>
               ) : (
-                <ul className="flex flex-col gap-1.5">
+                <ul className="flex flex-col gap-2.5">
                   {documents.map((doc) => (
                     <li
                       key={doc.source}
-                      className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5 transition-all duration-200 hover:border-surface-700/70 hover:bg-surface-800/50"
+                      className="card group flex items-center justify-between border border-surface-700/50 bg-surface-800 px-3.5 py-3 hover:border-surface-700 hover:bg-surface-750"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-[13px] leading-snug text-content">
@@ -493,13 +493,15 @@ export default function App() {
         )}
         <div className="flex-1 overflow-y-auto px-6 py-8">
           {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-5">
-              <Mark />
+            <div className="mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-7 pb-10">
+              <span className="mark-glow">
+                <Mark size={56} />
+              </span>
               <div className="text-center">
-                <p className="text-lg font-semibold text-content">
+                <p className="text-xl font-semibold tracking-tight text-content">
                   Dokümanlarınıza sorun
                 </p>
-                <p className="mt-1 text-sm text-subtle">
+                <p className="mt-2 text-sm leading-relaxed text-subtle">
                   Bir doküman yükleyin, cevap kaynaklarıyla birlikte gelsin.
                 </p>
               </div>
@@ -509,7 +511,7 @@ export default function App() {
                     <button
                       key={q}
                       onClick={() => handleAsk(q)}
-                      className="rounded-full border border-surface-700 bg-surface-850 px-4 py-2 text-xs text-muted shadow-[var(--shadow-card)] transition-all duration-200 hover:border-accent-500/60 hover:bg-surface-800 hover:text-content"
+                      className="card border border-surface-700 bg-surface-800 px-4 py-2.5 text-xs text-muted hover:border-accent-500/70 hover:bg-accent-500/10 hover:text-content"
                     >
                       {q}
                     </button>
@@ -557,7 +559,7 @@ export default function App() {
                             ref={(el) => {
                               sourceRefs.current[`${i}:${j}`] = el;
                             }}
-                            className={`flex items-start gap-3 rounded-xl border bg-surface-850 px-3.5 py-3 shadow-[var(--shadow-card)] transition-colors duration-500 ${
+                            className={`card flex items-start gap-3 border bg-surface-800 px-3.5 py-3 ${
                               highlighted === `${i}:${j}`
                                 ? "source-flash border-accent-500"
                                 : "border-surface-700/50"
@@ -585,20 +587,20 @@ export default function App() {
             </div>
           )}
         </div>
-        <div className="border-t border-surface-800 p-4">
-          <div className="mx-auto flex max-w-3xl gap-2">
+        <div className="border-t border-surface-800/60 px-6 py-5">
+          <div className="mx-auto flex w-full max-w-3xl gap-2.5">
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAsk()}
               disabled={asking}
-              className="flex-1 rounded-lg bg-surface-850 border border-surface-800 px-4 py-2.5 text-sm outline-none transition focus:border-accent-500 disabled:opacity-50"
+              className="composer-input flex-1 rounded-xl border border-surface-700/60 bg-surface-800 px-4 py-3 text-sm text-content placeholder:text-subtle disabled:opacity-50"
               placeholder="Dokümanlarınıza bir soru sorun..."
             />
             <button
               onClick={() => handleAsk()}
               disabled={asking || !question.trim()}
-              className="rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-accent-400 disabled:opacity-40 disabled:hover:bg-accent-500"
+              className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-px hover:bg-accent-400 hover:shadow-[var(--shadow-card-active)] disabled:translate-y-0 disabled:opacity-40 disabled:hover:bg-accent-500 disabled:hover:shadow-[var(--shadow-card)]"
             >
               {asking ? "..." : "Sor"}
             </button>
