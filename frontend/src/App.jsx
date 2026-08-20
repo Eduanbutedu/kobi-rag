@@ -37,19 +37,6 @@ function AnswerText({ text, sourceCount, onCite }) {
   );
 }
 
-function IconChat({ size = 20 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M20 12a7.5 7.5 0 0 1-7.5 7.5H8l-4 3v-3.6A7.5 7.5 0 1 1 20 12Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function IconLibrary({ size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -68,6 +55,33 @@ function IconPlus({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconSun({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6l1.4 1.4m10 10 1.4 1.4m0-12.8-1.4 1.4m-10 10-1.4 1.4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconMoon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -138,8 +152,13 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
-  // Sol panel iki görünüm arasında geçiş yapıyor: sohbetler ve dokümanlar
-  const [panel, setPanel] = useState("chats");
+  const [docsOpen, setDocsOpen] = useState(true);
+  const [theme, setTheme] = useState("dark");
+
+  useEffect(() => {
+    // Tema kökteki sınıfla dönüyor; tüm yüzey değişkenleri oradan okunuyor
+    document.documentElement.classList.toggle("light", theme === "light");
+  }, [theme]);
 
   const focusSource = (messageIndex, sourceIndex) => {
     const key = `${messageIndex}:${sourceIndex}`;
@@ -305,173 +324,106 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-surface-950 text-content">
-      {/* Sol şerit — marka ve panel seçimi */}
-      <nav className="glass-rail z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r py-5 shadow-[var(--shadow-rail)]">
-        <Mark size={34} />
+      {/* Sol şerit — marka, yeni sohbet, panel ve tema anahtarları */}
+      <nav className="glass-rail z-30 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r py-5 shadow-[var(--shadow-rail)]">
+        <span className="mark-glow">
+          <Mark size={34} />
+        </span>
 
         <button
           onClick={handleNewChat}
           disabled={asking}
           title="Yeni sohbet"
           aria-label="Yeni sohbet"
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-accent-500/40 bg-accent-500/5 text-accent-400 transition-all duration-200 hover:-translate-y-px hover:border-accent-500 hover:bg-accent-500/15 hover:shadow-[var(--shadow-card-active)] disabled:opacity-40"
+          className="interactive flex h-11 w-11 items-center justify-center rounded-xl border border-accent-500/40 bg-accent-500/10 text-accent-400 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[var(--shadow-card-active)] disabled:opacity-40"
         >
           <IconPlus />
         </button>
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="mt-auto flex flex-col items-center gap-2">
           <RailButton
-            label="Sohbetler"
-            active={panel === "chats"}
-            onClick={() => setPanel("chats")}
-          >
-            <IconChat />
-          </RailButton>
-          <RailButton
-            label="Dokümanlar"
-            active={panel === "docs"}
-            onClick={() => setPanel("docs")}
+            label={docsOpen ? "Doküman panelini gizle" : "Doküman panelini göster"}
+            active={docsOpen}
+            onClick={() => setDocsOpen((open) => !open)}
           >
             <IconLibrary />
           </RailButton>
+          <RailButton
+            label={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
+            active={false}
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          >
+            {theme === "dark" ? <IconSun /> : <IconMoon />}
+          </RailButton>
         </div>
-
-        <p className="mt-auto text-[9px] uppercase tracking-[0.2em] text-subtle [writing-mode:vertical-rl]">
-          yerel
-        </p>
       </nav>
 
-      {/* Orta panel — seçili görünümün içeriği */}
-      <aside className="glass-panel z-10 flex w-[19rem] shrink-0 flex-col border-r shadow-[var(--shadow-panel)]">
-        <header className="flex items-baseline justify-between border-b border-surface-800/80 px-5 py-5">
-          <h2 className="panel-title text-[13px] text-content">
-            {panel === "chats" ? "Sohbetler" : "Dokümanlar"}
-          </h2>
-          <span className="text-[11px] text-subtle">
-            {panel === "chats" ? sessions.length : documents.length}
-          </span>
+      {/* Sohbet listesi paneli */}
+      <aside className="glass-panel z-20 flex w-[19rem] shrink-0 flex-col border-r shadow-[var(--shadow-panel)]">
+        <header className="flex items-baseline justify-between border-b border-[var(--glass-border)] px-5 py-5">
+          <h2 className="panel-title text-content">Sohbetler</h2>
+          <span className="text-[11px] text-subtle">{sessions.length}</span>
         </header>
 
         {error && (
-          <div className="mx-5 mt-4 rounded-lg border border-red-900/80 bg-red-950/50 px-3 py-2 text-xs text-red-300">
+          <div className="mx-5 mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
             {error}
           </div>
         )}
 
-        {panel === "chats" ? (
-          <div className="flex-1 overflow-y-auto px-3 py-4">
-            {sessions.length === 0 ? (
-              <p className="px-2 text-xs leading-relaxed text-subtle">
-                Henüz sohbet yok. Bir soru sorduğunuzda burada birikir.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2.5">
-                {sessions.map((session) => (
-                  <li key={session.id}>
-                    <div
-                      className={`card group relative border px-3.5 py-3 ${
-                        session.id === sessionId
-                          ? "card-active border-accent-500/70 bg-accent-500/10"
-                          : "border-surface-700/50 bg-surface-800 hover:border-surface-700 hover:bg-surface-750"
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          {sessions.length === 0 ? (
+            <p className="px-2 text-xs leading-relaxed text-subtle">
+              Henüz sohbet yok. Bir soru sorduğunuzda burada birikir.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2.5">
+              {sessions.map((session) => (
+                <li key={session.id}>
+                  <div
+                    className={`card group relative border px-3.5 py-3 ${
+                      session.id === sessionId
+                        ? "card-active border-accent-500/70"
+                        : "border-surface-700/50 bg-surface-800 hover:border-surface-700 hover:bg-surface-750"
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleOpenSession(session.id)}
+                      disabled={asking || loadingSession}
+                      className="block w-full text-left disabled:opacity-50"
+                    >
+                      <p
+                        className={`truncate pr-6 text-[13px] font-medium leading-snug ${
+                          session.id === sessionId ? "text-accent-400" : "text-content"
+                        }`}
+                      >
+                        {sessionLabel(session)}
+                      </p>
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-subtle">
+                        <span>{session.message_count} mesaj</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{relativeTime(session.updated_at)}</span>
+                      </p>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSession(session.id)}
+                      onMouseLeave={() =>
+                        setConfirmDeleteSession((c) => (c === session.id ? null : c))
+                      }
+                      className={`absolute right-2 top-2 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
+                        confirmDeleteSession === session.id
+                          ? "bg-red-500/15 text-red-400 opacity-100"
+                          : "text-subtle opacity-0 hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
                       }`}
                     >
-                      <button
-                        onClick={() => handleOpenSession(session.id)}
-                        disabled={asking || loadingSession}
-                        className="block w-full text-left disabled:opacity-50"
-                      >
-                        <p
-                          className={`truncate pr-6 text-[13px] font-medium leading-snug ${
-                            session.id === sessionId ? "text-accent-400" : "text-content"
-                          }`}
-                        >
-                          {sessionLabel(session)}
-                        </p>
-                        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-subtle">
-                          <span>{session.message_count} mesaj</span>
-                          <span aria-hidden="true">·</span>
-                          <span>{relativeTime(session.updated_at)}</span>
-                        </p>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSession(session.id)}
-                        onMouseLeave={() =>
-                          setConfirmDeleteSession((c) => (c === session.id ? null : c))
-                        }
-                        className={`absolute right-2 top-2 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
-                          confirmDeleteSession === session.id
-                            ? "bg-red-500/15 text-red-300 opacity-100"
-                            : "text-subtle opacity-0 hover:bg-red-500/15 hover:text-red-300 group-hover:opacity-100"
-                        }`}
-                      >
-                        {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="px-5 pt-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.txt"
-                className="hidden"
-                onChange={handleFileSelected}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full rounded-xl border border-dashed border-surface-700 px-4 py-5 text-xs leading-relaxed text-muted transition-all duration-200 hover:border-accent-500 hover:bg-accent-500/10 hover:text-accent-400 disabled:opacity-50"
-              >
-                {uploading ? "İşleniyor..." : "PDF / TXT yükle"}
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-3 py-4">
-              {documents.length === 0 ? (
-                <p className="px-2 text-xs text-subtle">Henüz doküman yok.</p>
-              ) : (
-                <ul className="flex flex-col gap-2.5">
-                  {documents.map((doc) => (
-                    <li
-                      key={doc.source}
-                      className="card group flex items-center justify-between border border-surface-700/50 bg-surface-800 px-3.5 py-3 hover:border-surface-700 hover:bg-surface-750"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] leading-snug text-content">
-                          {doc.source}
-                        </p>
-                        <p className="mt-1 text-[11px] text-subtle">{doc.chunks} parça</p>
-                      </div>
-                      <button
-                        onClick={() => handleDelete(doc.source)}
-                        onMouseLeave={() =>
-                          setConfirmDelete((c) => (c === doc.source ? null : c))
-                        }
-                        className={`ml-2 shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
-                          confirmDelete === doc.source
-                            ? "bg-red-950 text-red-300 opacity-100"
-                            : "text-subtle opacity-0 hover:bg-red-950 hover:text-red-300 group-hover:opacity-100"
-                        }`}
-                      >
-                        {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <p className="border-t border-surface-800/80 px-5 py-4 text-[11px] leading-relaxed text-subtle">
-              Dokümanlarınız bu makineden çıkmaz — arama ve cevaplama tamamen
-              yerel çalışır.
-            </p>
-          </div>
-        )}
+                      {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </aside>
 
       {/* Sağ panel — sohbet */}
@@ -607,6 +559,73 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Sağ panel — dokümanlar, açılıp kapanabilir */}
+      {docsOpen && (
+        <aside className="glass-panel z-20 flex w-[17rem] shrink-0 flex-col border-l shadow-[var(--shadow-panel)]">
+          <header className="flex items-baseline justify-between border-b border-[var(--glass-border)] px-5 py-5">
+            <h2 className="panel-title text-content">Dokümanlar</h2>
+            <span className="text-[11px] text-subtle">{documents.length}</span>
+          </header>
+
+          <div className="px-4 pt-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt"
+              className="hidden"
+              onChange={handleFileSelected}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="interactive w-full rounded-xl border border-dashed border-surface-700 px-4 py-5 text-xs leading-relaxed text-muted hover:border-accent-500 hover:bg-accent-500/10 hover:text-accent-400 disabled:opacity-50"
+            >
+              {uploading ? "İşleniyor..." : "PDF / TXT yükle"}
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 py-4">
+            {documents.length === 0 ? (
+              <p className="px-2 text-xs text-subtle">Henüz doküman yok.</p>
+            ) : (
+              <ul className="flex flex-col gap-2.5">
+                {documents.map((doc) => (
+                  <li
+                    key={doc.source}
+                    className="card group flex items-center justify-between border border-surface-700/50 bg-surface-800 px-3.5 py-3 hover:border-surface-700 hover:bg-surface-750"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] leading-snug text-content">
+                        {doc.source}
+                      </p>
+                      <p className="mt-1 text-[11px] text-subtle">{doc.chunks} parça</p>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(doc.source)}
+                      onMouseLeave={() =>
+                        setConfirmDelete((c) => (c === doc.source ? null : c))
+                      }
+                      className={`ml-2 shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
+                        confirmDelete === doc.source
+                          ? "bg-red-500/15 text-red-400 opacity-100"
+                          : "text-subtle opacity-0 hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
+                      }`}
+                    >
+                      {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <p className="border-t border-[var(--glass-border)] px-5 py-4 text-[11px] leading-relaxed text-subtle">
+            Dokümanlarınız bu makineden çıkmaz — arama ve cevaplama tamamen
+            yerel çalışır.
+          </p>
+        </aside>
+      )}
     </div>
   );
 }
