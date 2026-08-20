@@ -86,6 +86,23 @@ function IconMoon({ size = 20 }) {
   );
 }
 
+/** Small round avatar beside a message. */
+function Avatar({ role }) {
+  const isUser = role === "user";
+  return (
+    <span
+      aria-hidden="true"
+      className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold ${
+        isUser
+          ? "border-accent-500/40 bg-accent-500/15 text-accent-400"
+          : "border-surface-700/60 bg-surface-800 text-muted"
+      }`}
+    >
+      {isUser ? "S" : <Mark size={16} />}
+    </span>
+  );
+}
+
 /** One button in the left rail. */
 function RailButton({ label, active, onClick, disabled, children }) {
   return (
@@ -445,11 +462,11 @@ export default function App() {
         )}
         <div className="flex-1 overflow-y-auto px-6 py-8">
           {messages.length === 0 ? (
-            <div className="mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-7 pb-10">
-              <span className="mark-glow">
+            <div className="welcome-glow mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-7 pb-10">
+              <span className="mark-glow relative z-10">
                 <Mark size={56} />
               </span>
-              <div className="text-center">
+              <div className="relative z-10 text-center">
                 <p className="text-xl font-semibold tracking-tight text-content">
                   Dokümanlarınıza sorun
                 </p>
@@ -458,7 +475,7 @@ export default function App() {
                 </p>
               </div>
               {documents.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-2">
+                <div className="relative z-10 flex flex-wrap justify-center gap-2">
                   {SUGGESTED_QUESTIONS.map((q) => (
                     <button
                       key={q}
@@ -475,13 +492,19 @@ export default function App() {
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
               {messages.map((msg, i) =>
                 msg.role === "user" ? (
-                  <div key={i} className="msg-enter self-end max-w-[80%]">
-                    <div className="rounded-2xl rounded-br-md bg-accent-500 px-4 py-2.5 text-sm leading-relaxed text-white shadow-[var(--shadow-card)]">
+                  <div
+                    key={i}
+                    className="msg-enter flex max-w-[80%] items-start gap-2.5 self-end"
+                  >
+                    <div className="bubble-user rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-white shadow-[var(--shadow-card)]">
                       {msg.content}
                     </div>
+                    <Avatar role="user" />
                   </div>
                 ) : (
-                  <div key={i} className="msg-enter self-start w-full max-w-[90%]">
+                  <div key={i} className="msg-enter flex w-full max-w-[90%] items-start gap-2.5 self-start">
+                    <Avatar role="assistant" />
+                    <div className="min-w-0 flex-1">
                     <div
                       className={`whitespace-pre-wrap rounded-2xl rounded-bl-md border px-4 py-3 text-sm leading-relaxed shadow-[var(--shadow-card)] ${
                         msg.isError
@@ -532,6 +555,7 @@ export default function App() {
                         ))}
                       </div>
                     )}
+                    </div>
                   </div>
                 )
               )}
