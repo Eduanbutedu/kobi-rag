@@ -1,13 +1,39 @@
 """Answer generation via a local LLM served by Foundry Local."""
 
 import re
+import time
 from collections.abc import Iterator
 from functools import lru_cache
 
+import httpx
 import openai
 from foundry_local import FoundryLocalManager
 
 MODEL_ALIAS = "qwen3-4b"
+
+# Servis ayakta ama model yüklü değilse bağlantı kuruluyor ve hiç token
+# gelmiyor. Okuma zaman aşımı iki token arasındaki sessizliği ölçer, yani
+# ilk token için de geçerlidir; TOTAL_TIMEOUT ise üretim uzarsa devreye girer.
+CONNECT_TIMEOUT = 10.0
+FIRST_TOKEN_TIMEOUT = 20.0
+TOTAL_TIMEOUT = 120.0
+# Hazırlık yoklaması kullanıcıyı bekletmemeli
+PROBE_TIMEOUT = 8.0
+
+LLM_UNAVAILABLE_MESSAGE = (
+    "Dil modeline ulaşılamıyor. Foundry servisinin çalıştığından ve modelin "
+    "yüklü olduğundan emin olun."
+)
+
+
+class LLMUnavailableError(RuntimeError):
+    """The local model could not be reached, or did not answer in time."""
+
+
+def _unavailable(exc: Exception) -> LLMUnavailableError:
+    """One message for every way the model can fail to answer."""
+    return LLMUnavailableError(LLM_UNAVAILABLE_MESSAGE)
+
 
 SYSTEM_PROMPT = """Sen bir kurumsal doküman asistanısın. Görevin, sana verilen \
 doküman parçalarına dayanarak kullanıcının sorusunu cevaplamaktır.
@@ -55,10 +81,26 @@ def _dedupe_paragraphs(text: str) -> str:
 
 @lru_cache(maxsize=1)
 def _get_client() -> tuple[openai.OpenAI, str]:
-    """Start/attach to the Foundry Local service; return an OpenAI client + model id."""
-    manager = FoundryLocalManager(MODEL_ALIAS)
-    client = openai.OpenAI(base_url=manager.endpoint, api_key=manager.api_key)
-    model_id = manager.get_model_info(MODEL_ALIAS).id
+    """Start/attach to the Foundry Local service; return an OpenAI client + model id.
+
+    Raises LLMUnavailableError if the service cannot be started or reached, so a
+    dead backend surfaces as a message instead of a hang.
+    """
+    try:
+        manager = FoundryLocalManager(MODEL_ALIAS)
+        client = openai.OpenAI(
+            base_url=manager.endpoint,
+            api_key=manager.api_key,
+            timeout=httpx.Timeout(
+                TOTAL_TIMEOUT, connect=CONNECT_TIMEOUT, read=FIRST_TOKEN_TIMEOUT
+            ),
+            max_retries=0,
+        )
+        model_id = manager.get_model_info(MODEL_ALIAS).id
+    except LLMUnavailableError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - SDK türü ne olursa olsun sonuç aynı
+        raise _unavailable(exc) from exc
     return client, model_id
 
 
@@ -79,12 +121,15 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
     """Generate a grounded answer from retrieved chunks."""
     client, model_id = _get_client()
 
-    response = client.chat.completions.create(
-        model=model_id,
-        messages=_build_messages(question, chunks),
-        temperature=0.2,
-        max_tokens=300,
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=_build_messages(question, chunks),
+            temperature=0.2,
+            max_tokens=300,
+        )
+    except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
+        raise _unavailable(exc) from exc
     return _dedupe_paragraphs(_strip_thinking(response.choices[0].message.content or ""))
 
 
@@ -102,15 +147,18 @@ def complete(
     """
     client, model_id = _get_client()
 
-    response = client.chat.completions.create(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
+        raise _unavailable(exc) from exc
     return _strip_thinking(response.choices[0].message.content or "")
 
 
@@ -161,21 +209,65 @@ def generate_title(question: str) -> str:
     return clean_title(reply, fallback=question)
 
 
+def _iter_stream(stream, started: float) -> Iterator:
+    """Iterate a streaming response, converting stalls into LLMUnavailableError.
+
+    The read timeout on the client covers silence between tokens; this adds a
+    wall-clock cap so a model that trickles forever still ends.
+    """
+    try:
+        for chunk in stream:
+            if time.monotonic() - started > TOTAL_TIMEOUT:
+                raise LLMUnavailableError(
+                    "Dil modeli yanıtı zaman aşımına uğradı. Lütfen yeniden deneyin."
+                )
+            yield chunk
+    except LLMUnavailableError:
+        raise
+    except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
+        raise _unavailable(exc) from exc
+
+
+def check_llm() -> dict:
+    """Ask the model for one token to see whether it can actually answer.
+
+    Reaching the service is not enough: it answers on its port while the model
+    is still unloaded, which is the state that used to hang the interface.
+    """
+    try:
+        client, model_id = _get_client()
+        client.chat.completions.create(
+            model=model_id,
+            messages=[{"role": "user", "content": "ping /no_think"}],
+            max_tokens=1,
+            timeout=PROBE_TIMEOUT,
+        )
+    except LLMUnavailableError as exc:
+        return {"ready": False, "detail": str(exc)}
+    except Exception:  # noqa: BLE001 - hazırlık yoklaması asla patlamamalı
+        return {"ready": False, "detail": LLM_UNAVAILABLE_MESSAGE}
+    return {"ready": True, "detail": ""}
+
+
 def stream_answer(question: str, chunks: list[dict]) -> Iterator[str]:
     """Yield answer text incrementally as the model generates it."""
     client, model_id = _get_client()
 
-    stream = client.chat.completions.create(
-        model=model_id,
-        messages=_build_messages(question, chunks),
-        temperature=0.2,
-        max_tokens=300,
-        stream=True,
-    )
+    try:
+        stream = client.chat.completions.create(
+            model=model_id,
+            messages=_build_messages(question, chunks),
+            temperature=0.2,
+            max_tokens=300,
+            stream=True,
+        )
+    except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
+        raise _unavailable(exc) from exc
 
     raw = ""
     emitted = 0
-    for chunk in stream:
+    started = time.monotonic()
+    for chunk in _iter_stream(stream, started):
         delta = chunk.choices[0].delta.content or ""
         if not delta:
             continue
