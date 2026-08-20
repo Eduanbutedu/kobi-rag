@@ -58,3 +58,16 @@ export function toChatMessages(messages = []) {
     streaming: false,
   }));
 }
+
+/**
+ * Whether a session title matches what was typed in the search box.
+ *
+ * Case folding goes through the Turkish locale: toLowerCase() maps "İ" to an
+ * i with a combining dot and leaves "I" as "i", so searching "işten" would
+ * miss a title starting with "İşten" under the default locale.
+ */
+export function matchesSearch(title, query) {
+  const needle = (query ?? "").trim().toLocaleLowerCase("tr");
+  if (!needle) return true;
+  return (title ?? "").toLocaleLowerCase("tr").includes(needle);
+}

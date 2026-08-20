@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { UNTITLED, relativeTime, sessionLabel, toChatMessages } from "./sessions";
+import {
+  UNTITLED,
+  matchesSearch,
+  relativeTime,
+  sessionLabel,
+  toChatMessages,
+} from "./sessions";
 
 describe("sessionLabel", () => {
   it("uses the generated title once it arrives", () => {
@@ -88,5 +94,29 @@ describe("toChatMessages", () => {
   it("handles an empty or missing history", () => {
     expect(toChatMessages([])).toEqual([]);
     expect(toChatMessages()).toEqual([]);
+  });
+});
+
+describe("matchesSearch", () => {
+  it("matches on a substring", () => {
+    expect(matchesSearch("Yıllık izin süresi", "izin")).toBe(true);
+    expect(matchesSearch("Yıllık izin süresi", "kira")).toBe(false);
+  });
+
+  it("shows everything when the box is empty", () => {
+    expect(matchesSearch("herhangi bir başlık", "")).toBe(true);
+    expect(matchesSearch("herhangi bir başlık", "   ")).toBe(true);
+    expect(matchesSearch("herhangi bir başlık", undefined)).toBe(true);
+  });
+
+  it("folds case the Turkish way", () => {
+    // Varsayılan toLowerCase() "İ" harfini birleşik noktalı i'ye çeviriyor
+    expect(matchesSearch("İşten çıkarma", "işten")).toBe(true);
+    expect(matchesSearch("işten çıkarma", "İŞTEN")).toBe(true);
+    expect(matchesSearch("Yıllık İzin", "yıllık izin")).toBe(true);
+  });
+
+  it("handles a missing title", () => {
+    expect(matchesSearch(undefined, "izin")).toBe(false);
   });
 });

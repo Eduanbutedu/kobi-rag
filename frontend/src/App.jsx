@@ -1,7 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { parseCitations } from "./citations";
-import { relativeTime, sessionLabel, toChatMessages } from "./sessions";
+import {
+  IconBook,
+  IconChat,
+  IconCheck,
+  IconChevronLeft,
+  IconCopy,
+  IconLock,
+  IconMoon,
+  IconPlus,
+  IconRetry,
+  IconSearch,
+  IconSun,
+  IconUpload,
+  Semruk,
+} from "./icons";
+import { matchesSearch, relativeTime, sessionLabel, toChatMessages } from "./sessions";
 
 const SUGGESTED_QUESTIONS = [
   "İşten çıkarılan işçi kaç gün içinde dava açabilir?",
@@ -9,144 +24,28 @@ const SUGGESTED_QUESTIONS = [
   "Limited şirket kurmak için en az kaç ortak gerekir?",
 ];
 
-// Başlık cevaptan sonra arka planda üretiliyor; ilk tazeleme onu henüz
-// yakalayamaz, bu yüzden kısa bir gecikmeyle bir kez daha bakılıyor
-const TITLE_SETTLE_MS = 2000;
+// Başlık cevaptan sonra arka planda üretiliyor ve yerel model yavaş; tek bir
+// gecikme yetmediği için oturum listesi birkaç kez yoklanıyor.
+const TITLE_POLL_MS = 1500;
+const TITLE_POLL_TRIES = 5;
 
+/** The answer text with [n] markers turned into clickable superscripts. */
 function AnswerText({ text, sourceCount, onCite }) {
-  const parts = parseCitations(text, sourceCount);
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.type === "citation" ? (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onCite(part.index)}
-            title={`Kaynak ${part.value}`}
-            aria-label={`Kaynak ${part.value}'e git`}
-            className="citation-mark"
-          >
-            {part.value}
-          </button>
-        ) : (
-          <span key={i}>{part.value}</span>
-        )
-      )}
-    </>
-  );
-}
-
-function IconLibrary({ size = 20 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M5 4h5.5v16H5zM13 4h3.2l3 16H16z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M5 8.5h5.5M13.6 8.8h3.6" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-function IconPlus({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconSun({ size = 20 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6l1.4 1.4m10 10 1.4 1.4m0-12.8-1.4 1.4m-10 10-1.4 1.4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconMoon({ size = 20 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Small round avatar beside a message. */
-function Avatar({ role }) {
-  const isUser = role === "user";
-  return (
-    <span
-      aria-hidden="true"
-      className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold ${
-        isUser
-          ? "border-accent-500/40 bg-accent-500/15 text-accent-400"
-          : "border-surface-700/60 bg-surface-800 text-muted"
-      }`}
-    >
-      {isUser ? "S" : <Mark size={16} />}
-    </span>
-  );
-}
-
-/** One button in the left rail. */
-function RailButton({ label, active, onClick, disabled, children }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-40 ${
-        active
-          ? "bg-surface-800 text-accent-400 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
-          : "text-muted hover:bg-surface-800/60 hover:text-content"
-      }`}
-    >
-      {active && (
-        <span className="absolute -left-3 h-5 w-[3px] rounded-r-full bg-accent-500" />
-      )}
-      {children}
-    </button>
-  );
-}
-
-/** Abstract monogram: two offset planes reading as a stacked K. */
-function Mark({ size = 34 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <rect width="40" height="40" rx="11" fill="var(--color-accent-500)" />
-      <path
-        d="M15 11v18"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-        opacity="0.95"
-      />
-      <path
-        d="M27 11 17.5 20 27 29"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.7"
-      />
-    </svg>
+  return parseCitations(text, sourceCount).map((part, i) =>
+    part.type === "citation" ? (
+      <button
+        key={i}
+        type="button"
+        className="cite-mark"
+        title={`Kaynak ${part.value}`}
+        aria-label={`Kaynak ${part.value}'e git`}
+        onClick={() => onCite(part.index)}
+      >
+        [{part.value}]
+      </button>
+    ) : (
+      <span key={i}>{part.value}</span>
+    )
   );
 }
 
@@ -161,20 +60,22 @@ export default function App() {
   const [asking, setAsking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const chatEndRef = useRef(null);
-  // Kaynak kartlarına "mesajIndeksi:kaynakIndeksi" anahtarıyla erişiliyor
   const sourceRefs = useRef({});
-  const [highlighted, setHighlighted] = useState(null);
+  const [flashed, setFlashed] = useState(null);
 
   const [sessions, setSessions] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
   const [confirmDeleteSession, setConfirmDeleteSession] = useState(null);
-  const [docsOpen, setDocsOpen] = useState(true);
+  const [search, setSearch] = useState("");
+
   const [theme, setTheme] = useState("dark");
+  const [sessionsOpen, setSessionsOpen] = useState(true);
+  const [docsOpen, setDocsOpen] = useState(true);
+  const [copied, setCopied] = useState(null);
 
   useEffect(() => {
-    // Tema kökteki sınıfla dönüyor; tüm yüzey değişkenleri oradan okunuyor
-    document.documentElement.classList.toggle("light", theme === "light");
+    document.documentElement.dataset.theme = theme;
   }, [theme]);
 
   const focusSource = (messageIndex, sourceIndex) => {
@@ -182,16 +83,35 @@ export default function App() {
     const card = sourceRefs.current[key];
     if (!card) return;
     card.scrollIntoView({ behavior: "smooth", block: "center" });
-    setHighlighted(key);
-    window.setTimeout(() => setHighlighted((k) => (k === key ? null : k)), 1600);
+    setFlashed(key);
+    window.setTimeout(() => setFlashed((k) => (k === key ? null : k)), 1400);
   };
 
   async function refreshDocuments() {
     try {
-      const data = await api.listDocuments();
-      setDocuments(data.documents);
+      setDocuments((await api.listDocuments()).documents);
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function refreshSessions() {
+    try {
+      const { sessions: rows } = await api.listSessions();
+      setSessions(rows);
+      return rows;
+    } catch {
+      // Geçmiş çekilemezse sohbet çalışmaya devam etsin
+      return [];
+    }
+  }
+
+  /** Poll until the background-written title lands, then stop. */
+  async function waitForTitle(id) {
+    for (let attempt = 0; attempt < TITLE_POLL_TRIES; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, TITLE_POLL_MS));
+      const rows = await refreshSessions();
+      if (rows.find((s) => s.id === id)?.title?.trim()) return;
     }
   }
 
@@ -235,71 +155,8 @@ export default function App() {
     }
   }
 
-  async function handleAsk(preset) {
-    const q = (preset ?? question).trim();
-    if (!q || asking) return;
-    setQuestion("");
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: q },
-      { role: "assistant", content: "", sources: [], streaming: true },
-    ]);
-    setAsking(true);
-
-    const updateLast = (updater) =>
-      setMessages((prev) => {
-        const next = [...prev];
-        next[next.length - 1] = updater(next[next.length - 1]);
-        return next;
-      });
-
-    try {
-      let activeSession = sessionId;
-      await api.askStream(
-        q,
-        {
-          // Oturum ilk soruda sunucuda açılıyor; id metinden önce geliyor
-          onSession: (id) => {
-            activeSession = id;
-            setSessionId(id);
-          },
-          onSources: (sources) => updateLast((m) => ({ ...m, sources })),
-          onDelta: (piece) =>
-            updateLast((m) => ({ ...m, content: m.content + piece })),
-        },
-        3,
-        sessionId
-      );
-      updateLast((m) => ({ ...m, streaming: false }));
-      if (activeSession) {
-        // İlk tazeleme mesaj sayısını ve sırayı günceller, ikincisi başlığı
-        refreshSessions();
-        window.setTimeout(refreshSessions, TITLE_SETTLE_MS);
-      }
-    } catch (err) {
-      updateLast((m) => ({
-        ...m,
-        content: err.message,
-        isError: true,
-        streaming: false,
-      }));
-    } finally {
-      setAsking(false);
-    }
-  }
-
-  async function refreshSessions() {
-    try {
-      const { sessions: rows } = await api.listSessions();
-      setSessions(rows);
-    } catch {
-      // Geçmiş listesi çekilemezse sohbet çalışmaya devam etsin
-    }
-  }
-
   function handleNewChat() {
     if (asking) return;
-    // Yeni oturum ilk soruda sunucuda açılıyor; burada yalnızca bağ koparılıyor
     setSessionId(null);
     setMessages([]);
     setConfirmDeleteSession(null);
@@ -339,317 +196,410 @@ export default function App() {
     }
   }
 
-  return (
-    <div className="flex h-screen bg-surface-950 text-content">
-      {/* Sol şerit — marka, yeni sohbet, panel ve tema anahtarları */}
-      <nav className="glass-rail z-30 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r py-5 shadow-[var(--shadow-rail)]">
-        <span className="mark-glow">
-          <Mark size={34} />
-        </span>
+  async function handleAsk(preset) {
+    const q = (preset ?? question).trim();
+    if (!q || asking) return;
+    setQuestion("");
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: q },
+      { role: "assistant", content: "", sources: [], streaming: true },
+    ]);
+    setAsking(true);
 
+    const updateLast = (updater) =>
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = updater(next[next.length - 1]);
+        return next;
+      });
+
+    try {
+      let activeSession = sessionId;
+      await api.askStream(
+        q,
+        {
+          onSession: (id) => {
+            activeSession = id;
+            setSessionId(id);
+          },
+          onSources: (sources) => updateLast((m) => ({ ...m, sources })),
+          onDelta: (piece) => updateLast((m) => ({ ...m, content: m.content + piece })),
+        },
+        3,
+        sessionId
+      );
+      updateLast((m) => ({ ...m, streaming: false }));
+
+      if (activeSession) {
+        const rows = await refreshSessions();
+        // Başlığı zaten dolu olan oturum için boşuna yoklama yapılmıyor
+        if (!rows.find((s) => s.id === activeSession)?.title?.trim()) {
+          waitForTitle(activeSession);
+        }
+      }
+    } catch (err) {
+      updateLast((m) => ({
+        ...m,
+        content: err.message,
+        isError: true,
+        streaming: false,
+      }));
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  async function handleCopy(index, text) {
+    try {
+      await navigator.clipboard?.writeText(text);
+      setCopied(index);
+      window.setTimeout(() => setCopied((c) => (c === index ? null : c)), 1600);
+    } catch {
+      // Pano yoksa sessizce geç
+    }
+  }
+
+  const visibleSessions = sessions.filter((s) => matchesSearch(sessionLabel(s), search));
+  const activeTitle = sessionLabel(sessions.find((s) => s.id === sessionId));
+  const totalChunks = documents.reduce((sum, d) => sum + d.chunks, 0);
+  const emptyNote = { padding: "4px 2px", fontSize: 12, color: "var(--text-3)" };
+
+  return (
+    <>
+      <div className="ambient" />
+
+      <div className="app">
+        {/* 1. İkon şeridi */}
+        <nav className="rail">
+          <div className="brand-mark" title="KOBİ RAG — Semrük">
+            <Semruk />
+          </div>
+
+          <button
+            className="rail-new"
+            onClick={handleNewChat}
+            disabled={asking}
+            title="Yeni sohbet"
+            aria-label="Yeni sohbet"
+          >
+            <IconPlus />
+          </button>
+
+          <button
+            className={`rail-btn${sessionsOpen ? " active" : ""}`}
+            onClick={() => setSessionsOpen((open) => !open)}
+            title="Sohbetler"
+            aria-label="Sohbetler"
+            aria-pressed={sessionsOpen}
+          >
+            <IconChat />
+          </button>
+
+          <div className="rail-spacer" />
+
+          <button
+            className="rail-btn"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            title="Açık / koyu mod"
+            aria-label="Açık / koyu mod"
+          >
+            {theme === "dark" ? <IconMoon /> : <IconSun />}
+          </button>
+        </nav>
+
+        {/* 2. Sohbetler */}
+        <aside className={`sessions${sessionsOpen ? "" : " collapsed"}`}>
+          <div className="panel-head">
+            <span className="panel-title">Sohbetler</span>
+            <span className="panel-count">{sessions.length}</span>
+          </div>
+
+          <div className="search-wrap">
+            <IconSearch />
+            <input
+              className="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Sohbetlerde ara…"
+              aria-label="Sohbetlerde ara"
+            />
+          </div>
+
+          {error && <div className="panel-error">{error}</div>}
+
+          <div className="session-list">
+            {visibleSessions.length === 0 ? (
+              <p style={emptyNote}>
+                {sessions.length === 0
+                  ? "Henüz sohbet yok. Bir soru sorduğunuzda burada birikir."
+                  : "Aramanızla eşleşen sohbet yok."}
+              </p>
+            ) : (
+              visibleSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`session${session.id === sessionId ? " active" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenSession(session.id)}
+                  onKeyDown={(e) => e.key === "Enter" && handleOpenSession(session.id)}
+                >
+                  <div className="session-name">{sessionLabel(session)}</div>
+                  <div className="session-meta">
+                    {session.message_count} mesaj
+                    <span className="dot" />
+                    {relativeTime(session.updated_at)}
+                  </div>
+                  <button
+                    className={`session-del${
+                      confirmDeleteSession === session.id ? " confirm" : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSession(session.id);
+                    }}
+                    onMouseLeave={() =>
+                      setConfirmDeleteSession((c) => (c === session.id ? null : c))
+                    }
+                  >
+                    {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="panel-foot">
+            <div className="local-note">
+              <IconLock />
+              <span>
+                Dokümanlar bu makineden çıkmaz. Arama ve cevaplama tamamen yerel
+                çalışır.
+              </span>
+            </div>
+          </div>
+        </aside>
+
+        {/* Panel katlama düğmesi — panelin dışında, hep görünür */}
         <button
-          onClick={handleNewChat}
-          disabled={asking}
-          title="Yeni sohbet"
-          aria-label="Yeni sohbet"
-          className="interactive flex h-11 w-11 items-center justify-center rounded-xl border border-accent-500/40 bg-accent-500/10 text-accent-400 hover:border-accent-500 hover:bg-accent-500/20 hover:shadow-[var(--shadow-card-active)] disabled:opacity-40"
+          className={`edge-toggle${sessionsOpen ? "" : " flipped"}`}
+          onClick={() => setSessionsOpen((open) => !open)}
+          title={sessionsOpen ? "Paneli daralt" : "Paneli genişlet"}
+          aria-label={sessionsOpen ? "Paneli daralt" : "Paneli genişlet"}
         >
-          <IconPlus />
+          <IconChevronLeft />
         </button>
 
-        <div className="mt-auto flex flex-col items-center gap-2">
-          <RailButton
-            label={docsOpen ? "Doküman panelini gizle" : "Doküman panelini göster"}
-            active={docsOpen}
-            onClick={() => setDocsOpen((open) => !open)}
-          >
-            <IconLibrary />
-          </RailButton>
-          <RailButton
-            label={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
-            active={false}
-            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-          >
-            {theme === "dark" ? <IconSun /> : <IconMoon />}
-          </RailButton>
-        </div>
-      </nav>
-
-      {/* Sohbet listesi paneli */}
-      <aside className="glass-panel z-20 flex w-[19rem] shrink-0 flex-col border-r shadow-[var(--shadow-panel)]">
-        <header className="flex items-baseline justify-between border-b border-[var(--glass-border)] px-5 py-5">
-          <h2 className="panel-title text-content">Sohbetler</h2>
-          <span className="text-[11px] text-subtle">{sessions.length}</span>
-        </header>
-
-        {error && (
-          <div className="mx-5 mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-            {error}
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto px-3 py-4">
-          {sessions.length === 0 ? (
-            <p className="px-2 text-xs leading-relaxed text-subtle">
-              Henüz sohbet yok. Bir soru sorduğunuzda burada birikir.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2.5">
-              {sessions.map((session) => (
-                <li key={session.id}>
-                  <div
-                    className={`card group relative border px-3.5 py-3 ${
-                      session.id === sessionId
-                        ? "card-active border-accent-500/70"
-                        : "border-surface-700/50 bg-surface-800 hover:border-surface-700 hover:bg-surface-750"
-                    }`}
-                  >
-                    <button
-                      onClick={() => handleOpenSession(session.id)}
-                      disabled={asking || loadingSession}
-                      className="block w-full text-left disabled:opacity-50"
-                    >
-                      <p
-                        className={`truncate pr-6 text-[13px] font-medium leading-snug ${
-                          session.id === sessionId ? "text-accent-400" : "text-content"
-                        }`}
-                      >
-                        {sessionLabel(session)}
-                      </p>
-                      <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-subtle">
-                        <span>{session.message_count} mesaj</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{relativeTime(session.updated_at)}</span>
-                      </p>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteSession(session.id)}
-                      onMouseLeave={() =>
-                        setConfirmDeleteSession((c) => (c === session.id ? null : c))
-                      }
-                      className={`absolute right-2 top-2 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
-                        confirmDeleteSession === session.id
-                          ? "bg-red-500/15 text-red-400 opacity-100"
-                          : "text-subtle opacity-0 hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
-                      }`}
-                    >
-                      {confirmDeleteSession === session.id ? "Emin misin?" : "Sil"}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </aside>
-
-      {/* Sağ panel — sohbet */}
-      <main className="flex flex-1 flex-col bg-surface-950">
-        {messages.length > 0 && (
-          <header className="flex items-center justify-between gap-4 border-b border-surface-800 px-8 py-4">
-            <div className="min-w-0">
-              <h2 className="truncate text-[15px] font-semibold text-content">
-                {sessionLabel(sessions.find((s) => s.id === sessionId))}
-              </h2>
-              <p className="mt-0.5 text-[11px] text-subtle">
-                {documents.length} doküman üzerinde arama yapılıyor
-              </p>
-            </div>
-            {loadingSession && (
-              <span className="shrink-0 text-[11px] text-subtle">Yükleniyor...</span>
-            )}
-          </header>
-        )}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          {messages.length === 0 ? (
-            <div className="welcome-glow mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-7 pb-10">
-              <span className="mark-glow relative z-10">
-                <Mark size={56} />
-              </span>
-              <div className="relative z-10 text-center">
-                <p className="text-xl font-semibold tracking-tight text-content">
-                  Dokümanlarınıza sorun
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-subtle">
-                  Bir doküman yükleyin, cevap kaynaklarıyla birlikte gelsin.
-                </p>
+        {/* 3. Sohbet */}
+        <main className="chat">
+          <header className="chat-head">
+            <div style={{ minWidth: 0 }}>
+              <div className="chat-title">
+                {messages.length > 0 ? activeTitle : "KOBİ RAG"}
               </div>
-              {documents.length > 0 && (
-                <div className="relative z-10 flex flex-wrap justify-center gap-2">
-                  {SUGGESTED_QUESTIONS.map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => handleAsk(q)}
-                      className="card border border-surface-700 bg-surface-800 px-4 py-2.5 text-xs text-muted hover:border-accent-500/70 hover:bg-accent-500/10 hover:text-content"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="chat-sub">
+                {loadingSession
+                  ? "Yükleniyor…"
+                  : `${documents.length} doküman · ${totalChunks.toLocaleString(
+                      "tr-TR"
+                    )} parça`}
+              </div>
             </div>
-          ) : (
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-              {messages.map((msg, i) =>
-                msg.role === "user" ? (
-                  <div
-                    key={i}
-                    className="msg-enter flex max-w-[80%] items-start gap-2.5 self-end"
-                  >
-                    <div className="bubble-user rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-white shadow-[var(--shadow-card)]">
-                      {msg.content}
-                    </div>
-                    <Avatar role="user" />
+            <div className="head-actions">
+              <button
+                className={`icon-btn${docsOpen ? " active" : ""}`}
+                onClick={() => setDocsOpen((open) => !open)}
+                title="Doküman panelini aç/kapat"
+                aria-label="Doküman panelini aç/kapat"
+                aria-pressed={docsOpen}
+              >
+                <IconBook />
+              </button>
+            </div>
+          </header>
+
+          <div className="thread">
+            <div className="thread-inner">
+              {messages.length === 0 ? (
+                <div className="empty">
+                  <div className="empty-mark">
+                    <Semruk />
                   </div>
-                ) : (
-                  <div key={i} className="msg-enter flex w-full max-w-[90%] items-start gap-2.5 self-start">
-                    <Avatar role="assistant" />
-                    <div className="min-w-0 flex-1">
-                    <div
-                      className={`whitespace-pre-wrap rounded-2xl rounded-bl-md border px-4 py-3 text-sm leading-relaxed shadow-[var(--shadow-card)] ${
-                        msg.isError
-                          ? "border-red-500/30 bg-red-500/10 text-red-300"
-                          : "border-surface-700/60 bg-surface-800 text-content"
-                      }`}
-                    >
-                      {msg.content ? (
-                        <AnswerText
-                          text={msg.content}
-                          sourceCount={msg.sources?.length ?? 0}
-                          onCite={(sourceIndex) => focusSource(i, sourceIndex)}
-                        />
-                      ) : (
-                        msg.streaming ? "Düşünüyor..." : ""
-                      )}
-                      {msg.streaming && msg.content && (
-                        <span className="caret" aria-hidden="true" />
-                      )}
+                  <div>
+                    <div className="empty-title">Dokümanlarınıza sorun</div>
+                    <div className="empty-sub">
+                      Cevaplar, dayandıkları kaynaklarla birlikte gelir.
                     </div>
-                    {msg.sources?.length > 0 && (
-                      <div className="mt-3 flex flex-col gap-2">
-                        <p className="panel-title text-subtle">Kaynaklar</p>
-                        {msg.sources.map((src, j) => (
-                          <div
-                            key={j}
-                            ref={(el) => {
-                              sourceRefs.current[`${i}:${j}`] = el;
-                            }}
-                            className={`card flex items-start gap-3 border bg-surface-800 px-3.5 py-3 ${
-                              highlighted === `${i}:${j}`
-                                ? "source-flash border-accent-500"
-                                : "border-surface-700/50"
-                            }`}
-                          >
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-500/15 text-[11px] font-semibold text-accent-400">
-                              {j + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-medium text-muted">
-                                {src.source}
-                              </p>
-                              <p className="mt-1 line-clamp-3 text-xs text-subtle">
-                                {src.text}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                  </div>
+                  {documents.length > 0 && (
+                    <div className="chips">
+                      {SUGGESTED_QUESTIONS.map((q) => (
+                        <button key={q} className="chip" onClick={() => handleAsk(q)}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                messages.map((msg, i) =>
+                  msg.role === "user" ? (
+                    <div key={i} className="turn user">
+                      <div className="avatar me">S</div>
+                      <div className="bubble">{msg.content}</div>
+                    </div>
+                  ) : (
+                    <div key={i} className="turn assistant">
+                      <div className="avatar bot">
+                        <Semruk />
                       </div>
-                    )}
+                      <div className="answer-col">
+                        <div className={`bubble${msg.isError ? " is-error" : ""}`}>
+                          {msg.content ? (
+                            <AnswerText
+                              text={msg.content}
+                              sourceCount={msg.sources?.length ?? 0}
+                              onCite={(sourceIndex) => focusSource(i, sourceIndex)}
+                            />
+                          ) : (
+                            msg.streaming && "Düşünüyor…"
+                          )}
+                          {msg.streaming && msg.content && (
+                            <span className="caret" aria-hidden="true" />
+                          )}
+                        </div>
+
+                        {!msg.streaming && !msg.isError && msg.content && (
+                          <div className="msg-tools">
+                            <button
+                              className="tool"
+                              onClick={() => handleCopy(i, msg.content)}
+                            >
+                              {copied === i ? <IconCheck /> : <IconCopy />}
+                              {copied === i ? "Kopyalandı" : "Kopyala"}
+                            </button>
+                            <button
+                              className="tool"
+                              onClick={() => handleAsk(messages[i - 1]?.content)}
+                              disabled={asking}
+                            >
+                              <IconRetry />
+                              Yeniden sor
+                            </button>
+                          </div>
+                        )}
+
+                        {msg.sources?.length > 0 && (
+                          <div className="sources">
+                            <div className="sources-label">
+                              {msg.sources.length} kaynak
+                            </div>
+                            {msg.sources.map((src, j) => (
+                              <div
+                                key={j}
+                                ref={(el) => {
+                                  sourceRefs.current[`${i}:${j}`] = el;
+                                }}
+                                className={`source${
+                                  flashed === `${i}:${j}` ? " flash" : ""
+                                }`}
+                              >
+                                <div className="source-num">{j + 1}</div>
+                                <div style={{ minWidth: 0 }}>
+                                  <div className="source-file">{src.source}</div>
+                                  <div className="source-text">{src.text}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )
                 )
               )}
               <div ref={chatEndRef} />
             </div>
-          )}
-        </div>
-        <div className="border-t border-surface-800/60 px-6 py-5">
-          <div className="mx-auto flex w-full max-w-3xl gap-2.5">
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-              disabled={asking}
-              className="composer-input flex-1 rounded-xl border border-surface-700/60 bg-surface-800 px-4 py-3 text-sm text-content placeholder:text-subtle disabled:opacity-50"
-              placeholder="Dokümanlarınıza bir soru sorun..."
-            />
-            <button
-              onClick={() => handleAsk()}
-              disabled={asking || !question.trim()}
-              className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-px hover:bg-accent-400 hover:shadow-[var(--shadow-card-active)] disabled:translate-y-0 disabled:opacity-40 disabled:hover:bg-accent-500 disabled:hover:shadow-[var(--shadow-card)]"
-            >
-              {asking ? "..." : "Sor"}
-            </button>
-          </div>
-        </div>
-      </main>
-
-      {/* Sağ panel — dokümanlar, açılıp kapanabilir */}
-      {docsOpen && (
-        <aside className="glass-panel z-20 flex w-[17rem] shrink-0 flex-col border-l shadow-[var(--shadow-panel)]">
-          <header className="flex items-baseline justify-between border-b border-[var(--glass-border)] px-5 py-5">
-            <h2 className="panel-title text-content">Dokümanlar</h2>
-            <span className="text-[11px] text-subtle">{documents.length}</span>
-          </header>
-
-          <div className="px-4 pt-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.txt"
-              className="hidden"
-              onChange={handleFileSelected}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="interactive w-full rounded-xl border border-dashed border-surface-700 px-4 py-5 text-xs leading-relaxed text-muted hover:border-accent-500 hover:bg-accent-500/10 hover:text-accent-400 disabled:opacity-50"
-            >
-              {uploading ? "İşleniyor..." : "PDF / TXT yükle"}
-            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="composer">
+            <div className="composer-inner">
+              <div className="composer-row">
+                <input
+                  className="field"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAsk()}
+                  disabled={asking}
+                  placeholder="Dokümanlarınıza bir soru sorun…"
+                  aria-label="Soru"
+                />
+                <button
+                  className="send"
+                  onClick={() => handleAsk()}
+                  disabled={asking || !question.trim()}
+                >
+                  {asking ? "…" : "Sor"}
+                </button>
+              </div>
+              <div className="hint">
+                <span className="key">Enter</span> ile gönderin ·{" "}
+                <span className="key">Shift</span> + <span className="key">Enter</span> ile
+                satır ekleyin
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* 4. Dokümanlar */}
+        <aside className={`docs${docsOpen ? "" : " hidden"}`}>
+          <div className="panel-head">
+            <span className="panel-title">Dokümanlar</span>
+            <span className="panel-count">{documents.length}</span>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.txt"
+            style={{ display: "none" }}
+            onChange={handleFileSelected}
+          />
+          <button
+            className="upload"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            <IconUpload />
+            {uploading ? "İşleniyor…" : "PDF veya TXT yükleyin"}
+          </button>
+
+          <div className="doc-list">
             {documents.length === 0 ? (
-              <p className="px-2 text-xs text-subtle">Henüz doküman yok.</p>
+              <p style={emptyNote}>Henüz doküman yok.</p>
             ) : (
-              <ul className="flex flex-col gap-2.5">
-                {documents.map((doc) => (
-                  <li
-                    key={doc.source}
-                    className="card group flex items-center justify-between border border-surface-700/50 bg-surface-800 px-3.5 py-3 hover:border-surface-700 hover:bg-surface-750"
+              documents.map((doc) => (
+                <div key={doc.source} className="doc">
+                  <div className="doc-name">{doc.source}</div>
+                  <div className="doc-meta">
+                    {doc.chunks.toLocaleString("tr-TR")} parça
+                  </div>
+                  <button
+                    className={`doc-del${confirmDelete === doc.source ? " confirm" : ""}`}
+                    onClick={() => handleDelete(doc.source)}
+                    onMouseLeave={() =>
+                      setConfirmDelete((c) => (c === doc.source ? null : c))
+                    }
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] leading-snug text-content">
-                        {doc.source}
-                      </p>
-                      <p className="mt-1 text-[11px] text-subtle">{doc.chunks} parça</p>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(doc.source)}
-                      onMouseLeave={() =>
-                        setConfirmDelete((c) => (c === doc.source ? null : c))
-                      }
-                      className={`ml-2 shrink-0 rounded-md px-2 py-1 text-[10px] transition-all duration-200 ${
-                        confirmDelete === doc.source
-                          ? "bg-red-500/15 text-red-400 opacity-100"
-                          : "text-subtle opacity-0 hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
-                      }`}
-                    >
-                      {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                    {confirmDelete === doc.source ? "Emin misin?" : "Sil"}
+                  </button>
+                </div>
+              ))
             )}
           </div>
-
-          <p className="border-t border-[var(--glass-border)] px-5 py-4 text-[11px] leading-relaxed text-subtle">
-            Dokümanlarınız bu makineden çıkmaz — arama ve cevaplama tamamen
-            yerel çalışır.
-          </p>
         </aside>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
