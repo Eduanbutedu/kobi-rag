@@ -222,3 +222,5 @@ backend/eval/dataset_draft.jsonl
 
 # Evaluation corpus PDFs: downloaded with eval/fetch_corpus.py, not redistributed
 backend/data/corpus/
+
+design-reference.html
