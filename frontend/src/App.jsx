@@ -306,7 +306,7 @@ export default function App() {
   return (
     <div className="flex h-screen bg-surface-950 text-content">
       {/* Sol şerit — marka ve panel seçimi */}
-      <nav className="z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r border-surface-800/60 bg-surface-900 py-5 shadow-[var(--shadow-rail)]">
+      <nav className="glass-rail z-20 flex w-[68px] shrink-0 flex-col items-center gap-6 border-r py-5 shadow-[var(--shadow-rail)]">
         <Mark size={34} />
 
         <button
@@ -342,7 +342,7 @@ export default function App() {
       </nav>
 
       {/* Orta panel — seçili görünümün içeriği */}
-      <aside className="z-10 flex w-[19rem] shrink-0 flex-col border-r border-surface-800/60 bg-surface-850 shadow-[var(--shadow-panel)]">
+      <aside className="glass-panel z-10 flex w-[19rem] shrink-0 flex-col border-r shadow-[var(--shadow-panel)]">
         <header className="flex items-baseline justify-between border-b border-surface-800/80 px-5 py-5">
           <h2 className="panel-title text-[13px] text-content">
             {panel === "chats" ? "Sohbetler" : "Dokümanlar"}

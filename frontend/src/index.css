@@ -1,33 +1,86 @@
 @import "tailwindcss";
 
+/* Tailwind renkleri CSS değişkenlerine bağlanıyor; tema, :root üzerindeki
+   .light sınıfıyla bu değişkenleri değiştirerek dönüyor. */
 @theme {
-  /* Katmanlar. Aralarındaki fark gözle seçilecek kadar açık: en dışta zemin,
-     üstünde şerit, sonra panel, en üstte kartlar. Hiçbiri saf siyah değil. */
-  --color-surface-950: #0a0a0c;
-  --color-surface-900: #0d0d10;
-  --color-surface-850: #141418;
-  --color-surface-800: #1a1a20;
-  --color-surface-750: #21212a;
-  --color-surface-700: #2a2a35;
+  --color-surface-950: var(--s0);
+  --color-surface-900: var(--s1);
+  --color-surface-850: var(--s2);
+  --color-surface-800: var(--s3);
+  --color-surface-750: var(--s4);
+  --color-surface-700: var(--s5);
 
-  --color-content: #ecedf1;
-  --color-muted: #9ba1b0;
-  --color-subtle: #6b7180;
+  --color-content: var(--t1);
+  --color-muted: var(--t2);
+  --color-subtle: var(--t3);
 
-  /* Vurgu yalnızca aktif durum, birincil buton, çip ve odak halkası için. */
   --color-accent-600: #4f46e5;
   --color-accent-500: #6366f1;
   --color-accent-400: #818cf8;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
 
-  /* Gölgeler geniş yayılımlı ve düşük opaklıkta; sert kenar yok. */
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25), 0 4px 16px rgb(0 0 0 / 0.22);
-  --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.3), 0 12px 28px rgb(0 0 0 / 0.3);
-  --shadow-card-active: 0 2px 6px rgb(0 0 0 / 0.3), 0 12px 32px rgb(79 70 229 / 0.18);
-  --shadow-panel: 1px 0 0 rgb(255 255 255 / 0.04), 8px 0 32px rgb(0 0 0 / 0.45);
-  --shadow-rail: 4px 0 20px rgb(0 0 0 / 0.5);
-  --shadow-glow: 0 0 70px 12px rgb(99 102 241 / 0.22);
+:root {
+  /* Altı kademeli nötr gri: en dış zeminden kenarlığa. Saf siyah yok. */
+  --s0: #0a0a0b;
+  --s1: #121214;
+  --s2: #18181b;
+  --s3: #1f1f23;
+  --s4: #27272a;
+  --s5: #35353b;
+
+  --t1: #ececef;
+  --t2: #a1a1aa;
+  --t3: #71717a;
+
+  /* Buzlu cam: panelin arkasındaki zemin hafifçe geçsin */
+  --glass-rail: rgb(18 18 20 / 0.68);
+  --glass-panel: rgb(24 24 27 / 0.66);
+  --glass-border: rgb(255 255 255 / 0.06);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.28), 0 4px 16px rgb(0 0 0 / 0.24);
+  --shadow-card-hover: 0 4px 10px rgb(0 0 0 / 0.32), 0 16px 36px rgb(0 0 0 / 0.32);
+  --shadow-card-active: 0 4px 10px rgb(0 0 0 / 0.3), 0 14px 36px rgb(79 70 229 / 0.22);
+  --shadow-rail: 4px 0 24px rgb(0 0 0 / 0.45);
+  --shadow-panel: 0 0 32px rgb(0 0 0 / 0.4);
+  --shadow-glow: 0 0 80px 16px rgb(99 102 241 / 0.28);
+
+  --tint-accent: rgb(99 102 241 / 0.12);
+  --tint-accent-soft: rgb(99 102 241 / 0.05);
+
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  color-scheme: dark;
+}
+
+:root.light {
+  --s0: #f7f7f8;
+  --s1: #f1f1f3;
+  --s2: #ffffff;
+  --s3: #ffffff;
+  --s4: #f4f4f5;
+  --s5: #e2e2e6;
+
+  --t1: #18181b;
+  --t2: #52525b;
+  --t3: #8b8b95;
+
+  --glass-rail: rgb(241 241 243 / 0.72);
+  --glass-panel: rgb(255 255 255 / 0.7);
+  --glass-border: rgb(0 0 0 / 0.07);
+
+  --shadow-card: 0 1px 2px rgb(24 24 27 / 0.06), 0 4px 16px rgb(24 24 27 / 0.06);
+  --shadow-card-hover: 0 4px 10px rgb(24 24 27 / 0.08), 0 16px 36px rgb(24 24 27 / 0.1);
+  --shadow-card-active: 0 4px 10px rgb(24 24 27 / 0.08), 0 14px 36px rgb(79 70 229 / 0.16);
+  --shadow-rail: 4px 0 24px rgb(24 24 27 / 0.06);
+  --shadow-panel: 0 0 32px rgb(24 24 27 / 0.06);
+  --shadow-glow: 0 0 80px 16px rgb(99 102 241 / 0.16);
+
+  --tint-accent: rgb(99 102 241 / 0.1);
+  --tint-accent-soft: rgb(99 102 241 / 0.04);
+
+  color-scheme: light;
 }
 
 html {
@@ -35,6 +88,26 @@ html {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
 }
+
+/* --- Buzlu cam yüzeyler ---------------------------------------------- */
+
+.glass-rail,
+.glass-panel {
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+.glass-rail {
+  background: var(--glass-rail);
+  border-color: var(--glass-border);
+}
+
+.glass-panel {
+  background: var(--glass-panel);
+  border-color: var(--glass-border);
+}
+
+/* --- Hareket ---------------------------------------------------------- */
 
 @keyframes blink {
   50% {
@@ -45,7 +118,7 @@ html {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -54,37 +127,64 @@ html {
 }
 
 .msg-enter {
-  animation: rise 150ms ease-out;
+  animation: rise 260ms var(--ease-smooth);
 }
 
-/* Kart yüzeyi: yumuşak gölge, yuvarlak köşe, hover'da bir piksel yükselme.
-   translateY tek başına yeterince ince; parlaklık da hafifçe artıyor. */
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--color-accent-400);
+  animation: blink 1s steps(1) infinite;
+}
+
+/* --- Yüzeyler --------------------------------------------------------- */
+
 .card {
   border-radius: 12px;
   box-shadow: var(--shadow-card);
   transition:
-    transform 200ms ease,
-    box-shadow 200ms ease,
-    background-color 200ms ease,
-    border-color 200ms ease;
+    transform 240ms var(--ease-smooth),
+    box-shadow 240ms var(--ease-smooth),
+    background-color 240ms var(--ease-smooth),
+    border-color 240ms var(--ease-smooth);
 }
 
 .card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
 }
 
+/* Aktif kart: vurgu renginden şeffafa doğru çok hafif bir gradyan */
 .card-active {
+  background-image: linear-gradient(
+    135deg,
+    var(--tint-accent) 0%,
+    var(--tint-accent-soft) 55%,
+    transparent 100%
+  );
   box-shadow: var(--shadow-card-active);
 }
 
-.card-active:hover {
+.interactive {
+  transition:
+    transform 200ms var(--ease-smooth),
+    box-shadow 200ms var(--ease-smooth),
+    background-color 200ms var(--ease-smooth),
+    border-color 200ms var(--ease-smooth),
+    color 200ms var(--ease-smooth);
+}
+
+.interactive:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-/* Boş ekrandaki marka işaretinin arkasındaki yumuşak parıltı */
+/* Marka işaretinin arkasındaki yayılımlı ışık */
 .mark-glow {
   position: relative;
+  display: inline-flex;
 }
 
 .mark-glow::after {
@@ -96,22 +196,53 @@ html {
   pointer-events: none;
 }
 
-/* Metin girişi odaklanınca vurgu halkası */
+/* Boş ekranın arkasındaki merkezî parıltı */
+.welcome-glow {
+  position: relative;
+}
+
+.welcome-glow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: min(620px, 90%);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgb(99 102 241 / 0.13) 0%,
+    rgb(99 102 241 / 0.05) 38%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+/* Kullanıcı balonu: düz vurgu yerine hafif gradyan */
+.bubble-user {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-accent-400) 0%,
+    var(--color-accent-500) 45%,
+    var(--color-accent-600) 100%
+  );
+}
+
 .composer-input {
   transition:
-    border-color 200ms ease,
-    box-shadow 200ms ease,
-    background-color 200ms ease;
+    border-color 200ms var(--ease-smooth),
+    box-shadow 200ms var(--ease-smooth),
+    background-color 200ms var(--ease-smooth);
 }
 
 .composer-input:focus {
   outline: none;
   border-color: var(--color-accent-500);
-  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.16);
 }
 
-/* Marka ve panel başlıkları gövdeyle aynı aileden; ayrım yalnızca ağırlık,
-   boyut ve harf aralığında. */
+/* --- Başlıklar -------------------------------------------------------- */
+
 .brand {
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -124,7 +255,8 @@ html {
   text-transform: uppercase;
 }
 
-/* Cevap içindeki [1] işareti: üstsimge, tıklanabilir */
+/* --- Atıf işareti ----------------------------------------------------- */
+
 .citation-mark {
   display: inline-block;
   min-width: 1.25em;
@@ -138,17 +270,18 @@ html {
   line-height: 1.5;
   vertical-align: super;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 200ms var(--ease-smooth),
+    color 200ms var(--ease-smooth);
 }
 
 .citation-mark:hover,
 .citation-mark:focus-visible {
   background: var(--color-accent-500);
-  color: var(--color-surface-850);
+  color: #fff;
   outline: none;
 }
 
-/* Tıklanan kaynak kartının kenarlığı kısa süre parlar */
 @keyframes source-flash {
   0%,
   100% {
@@ -160,22 +293,14 @@ html {
 }
 
 .source-flash {
-  animation: source-flash 1.4s ease-out;
+  animation: source-flash 1.4s var(--ease-smooth);
 }
 
-.caret {
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  margin-left: 2px;
-  vertical-align: -0.15em;
-  background: var(--color-accent-400);
-  animation: blink 1s steps(1) infinite;
-}
+/* --- Kaydırma çubukları ----------------------------------------------- */
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-surface-700) transparent;
+  scrollbar-color: var(--s5) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -183,7 +308,7 @@ html {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-surface-700);
+  background: var(--s5);
   border-radius: 4px;
 }
 
@@ -200,7 +325,8 @@ html {
 
   .card,
   .card:hover,
-  .card-active:hover {
+  .interactive,
+  .interactive:hover:not(:disabled) {
     transform: none;
     transition: none;
   }
