@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.deps import get_chat, get_store
 from rag.extraction import SUPPORTED_EXTENSIONS
-from rag.llm import generate_answer, generate_title, stream_answer
+from rag.llm import LLMUnavailableError, check_llm, generate_answer, generate_title, stream_answer
 from rag.service import ingest_file, retrieve
 
 app = FastAPI(
@@ -73,8 +73,13 @@ def _name_session(session_id: int, question: str) -> None:
 
 
 @app.get("/health")
-def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+def health_check() -> dict:
+    """Report whether the model can answer, not merely that the API is up.
+
+    The interface asks on startup so it can warn beforehand, instead of
+    leaving the user in front of a caret that never moves.
+    """
+    return {"status": "ok", "llm": check_llm()}
 
 
 @app.post("/documents")
@@ -107,7 +112,11 @@ def search(request: SearchRequest) -> dict:
 def ask(request: AskRequest, background: BackgroundTasks) -> dict:
     session_id = _resolve_session(request.session_id)
     chunks = retrieve(get_store(), request.question, k=request.k)
-    answer = generate_answer(request.question, chunks) if chunks else NO_DOCUMENTS
+    try:
+        answer = generate_answer(request.question, chunks) if chunks else NO_DOCUMENTS
+    except LLMUnavailableError as exc:
+        # Yarım kalan bir turu geçmişe yazmak yerine hatayı açıkça bildir
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     if _record_exchange(session_id, request.question, answer, chunks):
         background.add_task(_name_session, session_id, request.question)
@@ -126,6 +135,7 @@ def ask_stream(request: AskRequest, background: BackgroundTasks) -> StreamingRes
     chunks = retrieve(get_store(), request.question, k=request.k)
 
     def event_stream():
+        failure = None
         meta = json.dumps({"session_id": session_id}, ensure_ascii=False)
         yield f"event: session\ndata: {meta}\n\n"
         yield f"event: sources\ndata: {json.dumps(chunks, ensure_ascii=False)}\n\n"
@@ -135,13 +145,19 @@ def ask_stream(request: AskRequest, background: BackgroundTasks) -> StreamingRes
             yield f"event: delta\ndata: {json.dumps(answer, ensure_ascii=False)}\n\n"
         else:
             pieces = []
-            for piece in stream_answer(request.question, chunks):
-                pieces.append(piece)
-                yield f"event: delta\ndata: {json.dumps(piece, ensure_ascii=False)}\n\n"
+            try:
+                for piece in stream_answer(request.question, chunks):
+                    pieces.append(piece)
+                    yield f"event: delta\ndata: {json.dumps(piece, ensure_ascii=False)}\n\n"
+            except LLMUnavailableError as exc:
+                # Akışın HTTP durumu çoktan 200; hata ancak bir olayla duyurulabilir
+                detail = json.dumps({"message": str(exc)}, ensure_ascii=False)
+                yield f"event: error\ndata: {detail}\n\n"
+                failure = str(exc)
             answer = "".join(pieces)
 
-        # Tam cevap ancak akış bitince elde oluyor; kayıt burada yapılıyor
-        if _record_exchange(session_id, request.question, answer, chunks):
+        # Yarım kalan cevap saklanmaz; sadece tamamlanan turlar geçmişe girer
+        if failure is None and _record_exchange(session_id, request.question, answer, chunks):
             background.add_task(_name_session, session_id, request.question)
         yield "event: done\ndata: {}\n\n"
 

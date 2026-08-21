@@ -29,6 +29,11 @@ const SUGGESTED_QUESTIONS = [
 const TITLE_POLL_MS = 1500;
 const TITLE_POLL_TRIES = 5;
 
+// /health modelin hazır olmadığını söylerse ilk sorudan önce uyarılıyor;
+// yükleme dakikalar sürebiliyor ve sebebi ekranda hiç görünmüyordu.
+const MODEL_NOT_READY =
+  "Dil modeli şu an hazır değil. Sorularınız cevapsız kalabilir.";
+
 /** The answer text with [n] markers turned into clickable superscripts. */
 function AnswerText({ text, sourceCount, onCite }) {
   return parseCitations(text, sourceCount).map((part, i) =>
@@ -73,6 +78,7 @@ export default function App() {
   const [sessionsOpen, setSessionsOpen] = useState(true);
   const [docsOpen, setDocsOpen] = useState(true);
   const [copied, setCopied] = useState(null);
+  const [llmWarning, setLlmWarning] = useState(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -115,9 +121,20 @@ export default function App() {
     }
   }
 
+  /** Ask the backend whether the model can answer before anyone tries. */
+  async function checkModel() {
+    try {
+      const { llm } = await api.health();
+      setLlmWarning(llm?.ready === false ? llm.detail || MODEL_NOT_READY : null);
+    } catch {
+      // Sunucuya hiç ulaşılamıyorsa ilk istek hatayı zaten gösterecek
+    }
+  }
+
   useEffect(() => {
     refreshDocuments();
     refreshSessions();
+    checkModel();
   }, []);
 
   useEffect(() => {
@@ -239,12 +256,14 @@ export default function App() {
         }
       }
     } catch (err) {
+      // Akış yarıda kaldıysa gelen metin korunuyor, hata altına ekleniyor
       updateLast((m) => ({
         ...m,
-        content: err.message,
+        content: m.content ? `${m.content}\n\n${err.message}` : err.message,
         isError: true,
         streaming: false,
       }));
+      checkModel();
     } finally {
       setAsking(false);
     }
@@ -525,6 +544,7 @@ export default function App() {
 
           <div className="composer">
             <div className="composer-inner">
+              {llmWarning && <div className="composer-warning">{llmWarning}</div>}
               <div className="composer-row">
                 <input
                   className="field"

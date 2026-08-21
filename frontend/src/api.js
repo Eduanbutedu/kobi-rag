@@ -1,5 +1,10 @@
 const BASE = "http://127.0.0.1:8000";
 
+// Yerel model çökerse ya da hiç yüklenmemişse akış tek bir parça göndermeden
+// kapanabilir. Bunu sessiz bir bitiş değil, başarısızlık olarak sayıyoruz.
+export const STREAM_FAILED_MESSAGE =
+  "Model cevap üretemedi. Foundry servisinin çalıştığından emin olup yeniden deneyin.";
+
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, options);
   if (!res.ok) {
@@ -10,6 +15,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  health: () => request("/health"),
   listDocuments: () => request("/documents"),
   uploadDocument: (file) => {
     const form = new FormData();
@@ -41,6 +47,8 @@ export const api = {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let failure = null;
+    let deltas = 0;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -56,8 +64,15 @@ export const api = {
         }
         if (event === "session") onSession?.(JSON.parse(data).session_id);
         else if (event === "sources") onSources?.(JSON.parse(data));
-        else if (event === "delta") onDelta?.(JSON.parse(data));
+        else if (event === "error") failure = JSON.parse(data).message || STREAM_FAILED_MESSAGE;
+        else if (event === "delta") {
+          deltas += 1;
+          onDelta?.(JSON.parse(data));
+        }
       }
     }
+    // Akışın HTTP durumu 200 olduğu için hata ancak burada yüzeye çıkabilir
+    if (failure) throw new Error(failure);
+    if (deltas === 0) throw new Error(STREAM_FAILED_MESSAGE);
   },
 };
