@@ -224,3 +224,6 @@ backend/eval/dataset_draft.jsonl
 backend/data/corpus/
 
 design-reference.html
+
+# Local database: ingested chunks plus personal chat history, not shared
+backend/data/kobi_rag.db
