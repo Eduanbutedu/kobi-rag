@@ -205,3 +205,11 @@ def test_one_example_answers_and_one_declines():
     found, missing = examples.split("### Örnek 2", 1)
     assert "[1]." in found and NO_ANSWER_SENTENCE not in found
     assert NO_ANSWER_SENTENCE in missing
+
+
+def test_the_prompt_asks_for_the_answer_once():
+    # Model ayni bilgiyi duz cumle + "Bu sure..." + "Cevap: ..." diye uc kez
+    # yaziyordu; kural olumlu cerceveyle duruyor, "asla tekrarlama" degil.
+    assert "BİÇİM:" in llm.SYSTEM_PROMPT
+    assert "Cevabı bir kez ve doğrudan ver" in llm.SYSTEM_PROMPT
+    assert "Yazdığın son cümle bilginin kendisidir" in llm.SYSTEM_PROMPT

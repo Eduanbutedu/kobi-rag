@@ -15,8 +15,8 @@ MODEL_ALIAS = "qwen3-4b"
 # gelmiyor. Akışta okuma zaman aşımı iki token arasındaki sessizliği ölçer,
 # yani ilk token için de geçerlidir; TOTAL_TIMEOUT üretim uzarsa devreye girer.
 CONNECT_TIMEOUT = 10.0
-FIRST_TOKEN_TIMEOUT = 20.0
-TOTAL_TIMEOUT = 120.0
+FIRST_TOKEN_TIMEOUT = 90.0
+TOTAL_TIMEOUT = 3000.0
 # Hazırlık yoklaması kullanıcıyı bekletmemeli
 PROBE_TIMEOUT = 8.0
 
@@ -87,8 +87,10 @@ koy.
 CEVAP DİLİ: Cevabını HER ZAMAN kullanıcının SORUSUNUN dilinde yaz. Doküman parçaları farklı \
 dilde olsa bile soruyla aynı dilde cevap ver. Soru Türkçe ise cevap Türkçe olmak zorundadır.
 
-BİÇİM: Tek bir kısa paragraf yaz. Başlık, "Cevap:" gibi etiket ve tekrar kullanmadan \
-doğrudan cevabı ver.
+BİÇİM: Cevabı bir kez ve doğrudan ver. Bilgiyi tek bir cümlede eksiksiz yaz, kaynak \
+işaretini koy ve orada bitir; söylediğin şeyi ikinci bir cümleyle yeniden anlatmak yerine \
+ilk cümleyi tam yaz. Yazdığın son cümle bilginin kendisidir. Örnek 1'deki cevap tamamlanmış \
+bir cevaptır; o uzunluk yeterlidir.
 
 Aşağıdaki iki örnek yalnızca cevabın biçimini gösterir; içerikleri asıl cevabına girmez.
 
