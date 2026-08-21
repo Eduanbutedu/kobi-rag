@@ -12,13 +12,21 @@ from foundry_local import FoundryLocalManager
 MODEL_ALIAS = "qwen3-4b"
 
 # Servis ayakta ama model yüklü değilse bağlantı kuruluyor ve hiç token
-# gelmiyor. Okuma zaman aşımı iki token arasındaki sessizliği ölçer, yani
-# ilk token için de geçerlidir; TOTAL_TIMEOUT ise üretim uzarsa devreye girer.
+# gelmiyor. Akışta okuma zaman aşımı iki token arasındaki sessizliği ölçer,
+# yani ilk token için de geçerlidir; TOTAL_TIMEOUT üretim uzarsa devreye girer.
 CONNECT_TIMEOUT = 10.0
 FIRST_TOKEN_TIMEOUT = 20.0
 TOTAL_TIMEOUT = 120.0
 # Hazırlık yoklaması kullanıcıyı bekletmemeli
 PROBE_TIMEOUT = 8.0
+
+# Akış dışı çağrılarda cevabın tamamı tek okumada geliyor: orada okuma zaman
+# aşımı token arası sessizliği değil, üretimin tamamını ölçer. Bu makinede
+# üç parçalık bir soru 12-16 saniye sürüyor, yani 20 saniyelik ilk token
+# bütçesi /ask'i olduğu gibi kesiyordu. Sınır toplam süre olmalı.
+BLOCKING_TIMEOUT = httpx.Timeout(TOTAL_TIMEOUT, connect=CONNECT_TIMEOUT, read=TOTAL_TIMEOUT)
+# Akışta ilk token bütçesi anlamını koruyor: sessizlik gerçekten sessizliktir
+STREAM_TIMEOUT = httpx.Timeout(TOTAL_TIMEOUT, connect=CONNECT_TIMEOUT, read=FIRST_TOKEN_TIMEOUT)
 
 LLM_UNAVAILABLE_MESSAGE = (
     "Dil modeline ulaşılamıyor. Foundry servisinin çalıştığından ve modelin "
@@ -91,9 +99,7 @@ def _get_client() -> tuple[openai.OpenAI, str]:
         client = openai.OpenAI(
             base_url=manager.endpoint,
             api_key=manager.api_key,
-            timeout=httpx.Timeout(
-                TOTAL_TIMEOUT, connect=CONNECT_TIMEOUT, read=FIRST_TOKEN_TIMEOUT
-            ),
+            timeout=BLOCKING_TIMEOUT,
             max_retries=0,
         )
         model_id = manager.get_model_info(MODEL_ALIAS).id
@@ -127,6 +133,7 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
             messages=_build_messages(question, chunks),
             temperature=0.2,
             max_tokens=300,
+            timeout=BLOCKING_TIMEOUT,
         )
     except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
         raise _unavailable(exc) from exc
@@ -156,6 +163,7 @@ def complete(
             ],
             temperature=temperature,
             max_tokens=max_tokens,
+            timeout=BLOCKING_TIMEOUT,
         )
     except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
         raise _unavailable(exc) from exc
@@ -260,6 +268,7 @@ def stream_answer(question: str, chunks: list[dict]) -> Iterator[str]:
             temperature=0.2,
             max_tokens=300,
             stream=True,
+            timeout=STREAM_TIMEOUT,
         )
     except (openai.APITimeoutError, openai.APIConnectionError, openai.APIStatusError) as exc:
         raise _unavailable(exc) from exc

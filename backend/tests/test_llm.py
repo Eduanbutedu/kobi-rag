@@ -75,6 +75,24 @@ def test_a_working_answer_is_returned_as_usual(monkeypatch):
     assert llm.generate_answer("soru", [{"text": "parça"}]) == "Cevap [1]"
 
 
+def test_a_blocking_call_is_bounded_by_the_total_budget(monkeypatch):
+    # Akış dışında cevabın tamamı tek okumada gelir; ilk token bütçesiyle
+    # sınırlanırsa normal uzunlukta bir cevap bile zaman aşımına uğrar.
+    client = install(monkeypatch, reply("Cevap"))
+
+    llm.generate_answer("soru", [{"text": "parça"}])
+
+    assert client.calls[0]["timeout"].read == llm.TOTAL_TIMEOUT
+
+
+def test_a_streaming_call_keeps_the_first_token_budget(monkeypatch):
+    client = install(monkeypatch, iter([delta("a")]))
+
+    list(llm.stream_answer("soru", [{"text": "parça"}]))
+
+    assert client.calls[0]["timeout"].read == llm.FIRST_TOKEN_TIMEOUT
+
+
 # --- Akış -------------------------------------------------------------------
 
 
