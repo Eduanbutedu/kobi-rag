@@ -11,6 +11,13 @@ from rag.llm import LLM_UNAVAILABLE_MESSAGE, LLMUnavailableError
 CHUNKS = [{"id": 7, "text": "Bir ay içinde başvurulur.", "source": "is-kanunu.pdf", "score": 2.0}]
 
 
+class _Library:
+    """Stands in for a store that has documents in it."""
+
+    def list_documents(self):
+        return [{"source": "is-kanunu.pdf", "chunks": 2}]
+
+
 def _down(*args, **kwargs):
     raise LLMUnavailableError(LLM_UNAVAILABLE_MESSAGE)
 
@@ -19,7 +26,7 @@ def _down(*args, **kwargs):
 def client(tmp_path, monkeypatch):
     chat = ChatStore(tmp_path / "api.db")
     monkeypatch.setattr(main, "get_chat", lambda: chat)
-    monkeypatch.setattr(main, "get_store", lambda: None)
+    monkeypatch.setattr(main, "get_store", lambda: _Library())
     monkeypatch.setattr(main, "retrieve", lambda store, question, k=3: list(CHUNKS))
     monkeypatch.setattr(main, "generate_title", lambda q: "Başlık")
     monkeypatch.setattr(main, "check_llm", lambda: {"ready": True, "detail": ""})
@@ -77,6 +84,34 @@ def test_a_failed_answer_is_not_written_to_the_history(client, monkeypatch):
     client.post("/ask", json={"question": "soru", "session_id": session_id})
 
     assert client.get(f"/sessions/{session_id}/messages").json()["messages"] == []
+
+
+def test_a_failed_answer_opens_no_empty_session(client, monkeypatch):
+    monkeypatch.setattr(main, "generate_answer", _down)
+
+    client.post("/ask", json={"question": "soru"})
+
+    # Kenar çubuğunda boş bir "Yeni sohbet" satırı kalmamalı
+    assert client.get("/sessions").json()["sessions"] == []
+
+
+def test_a_broken_stream_opens_no_empty_session(client, monkeypatch):
+    monkeypatch.setattr(main, "stream_answer", _down)
+
+    with client.stream("POST", "/ask/stream", json={"question": "soru"}) as response:
+        "".join(response.iter_text())
+
+    assert client.get("/sessions").json()["sessions"] == []
+
+
+def test_a_failure_keeps_a_session_the_caller_named(client, monkeypatch):
+    monkeypatch.setattr(main, "generate_answer", _down)
+    session_id = client.post("/sessions").json()["session_id"]
+
+    client.post("/ask", json={"question": "soru", "session_id": session_id})
+
+    # Çağıranın açtığı oturum silinmez; sadece bu istekte açılan silinir
+    assert [s["id"] for s in client.get("/sessions").json()["sessions"]] == [session_id]
 
 
 def test_a_failed_answer_leaves_the_session_untitled(client, monkeypatch):

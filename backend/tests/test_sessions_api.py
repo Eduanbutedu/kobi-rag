@@ -13,12 +13,22 @@ CHUNKS = [
 ]
 
 
+class FakeStore:
+    """A store that only needs to say whether anything has been uploaded."""
+
+    def __init__(self, documents=({"source": "is-kanunu.pdf", "chunks": 2},)):
+        self.documents = list(documents)
+
+    def list_documents(self):
+        return self.documents
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     chat = ChatStore(tmp_path / "api.db")
     monkeypatch.setattr(main, "get_chat", lambda: chat)
     monkeypatch.setattr(main, "retrieve", lambda store, question, k=3: list(CHUNKS))
-    monkeypatch.setattr(main, "get_store", lambda: None)
+    monkeypatch.setattr(main, "get_store", FakeStore)
     monkeypatch.setattr(main, "generate_answer", lambda q, c: f"{q} cevabı [1]")
     monkeypatch.setattr(main, "generate_title", lambda q: "Üretilmiş başlık")
     yield TestClient(main.app)
@@ -129,13 +139,22 @@ def test_a_failing_title_never_breaks_the_answer(client, monkeypatch):
     assert client.get("/sessions").json()["sessions"][0]["title"] == ""
 
 
-def test_asking_with_no_documents_still_records_the_exchange(client, monkeypatch):
+def test_asking_with_nothing_relevant_still_records_the_exchange(client, monkeypatch):
     monkeypatch.setattr(main, "retrieve", lambda store, question, k=3: [])
     body = client.post("/ask", json={"question": "soru"}).json()
 
     messages = client.get(f"/sessions/{body['session_id']}/messages").json()["messages"]
-    assert messages[1]["content"] == main.NO_DOCUMENTS
+    assert messages[1]["content"] == main.NO_ANSWER
     assert messages[1]["sources"] == []
+
+
+def test_an_empty_library_is_told_apart_from_an_unanswerable_question(client, monkeypatch):
+    monkeypatch.setattr(main, "retrieve", lambda store, question, k=3: [])
+    monkeypatch.setattr(main, "get_store", lambda: FakeStore([]))
+
+    body = client.post("/ask", json={"question": "soru"}).json()
+
+    assert body["answer"] == main.NO_DOCUMENTS
 
 
 # --- Silme ------------------------------------------------------------------

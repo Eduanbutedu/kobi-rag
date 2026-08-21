@@ -32,6 +32,29 @@ RRF_K = 60
 DENSE_WEIGHT = 1.0
 BM25_WEIGHT = 0.95
 
+# Arama her zaman k tane sonuç döndürür, soru dokümanlarla ilgisiz olsa bile:
+# "merhaba" yazana da üç mevzuat parçası gösteriliyor ve model onlardan cevap
+# uydurmaya çalışıyordu. Cross-encoder skoru bu ikisini ayırabiliyor.
+#
+# Altın setteki 59 sorunun ilgili chunk'ları ile 13 bilgi sorusu olmayan
+# girdinin (selamlama, sohbet, alakasız istek) sonuçları ölçüldü. Dağılımlar
+# örtüşüyor: en zayıf gerçek soru -7,233, en güçlü alakasız girdi -1,057.
+# Yani hiçbir kesim ikisini temiz ayırmıyor; seçim bir ödünleşme.
+#
+#   kesim  hit@1  hit@3  hit@10  rec@10  mrr@10  susturulan  cevabı boşalan
+#   yok    0,729  0,864   0,983   0,939   0,816        0/13        1/59
+#   -2,5   0,729  0,864   0,966   0,915   0,814        9/13        2/59
+#   -1,0   0,695  0,814   0,881   0,809   0,766       13/13        7/59
+#
+# (man031 kesimden bağımsız olarak zaten cevapsızdı.)
+#
+# -2,5 seçildi: k=3 ile servis edilen hit@1 ve hit@3 hiç değişmiyor, alakasız
+# girdilerin dörtte üçü susuyor ve bedel tek bir soru (man016, tek ilgili
+# chunk'ı -7,233 alıyor). -1,0 kalan dört selamlamayı da temizliyor ama
+# hit@1'i ve hit@3'ü de düşürüyor ve altı soruyu daha cevapsız bırakıyor.
+# Ayrıntılar eval/README.md, "The relevance threshold".
+RELEVANCE_THRESHOLD = -2.5
+
 
 def ingest_file(store: DocumentStore, file_path: str | Path) -> int:
     """Extract, chunk, embed and store a document. Returns chunk count."""
@@ -90,6 +113,7 @@ def retrieve(
     dense_weight: float = DENSE_WEIGHT,
     bm25_weight: float = BM25_WEIGHT,
     rerank: bool = True,
+    min_score: float | None = RELEVANCE_THRESHOLD,
 ) -> list[dict]:
     """Return the k chunks most relevant to the query: [{id, text, source, score}, ...].
 
@@ -110,6 +134,13 @@ def retrieve(
     default because it is worth its cost: Hit@1 0.576 -> 0.729 and MRR@10
     0.695 -> 0.816 on the golden set, for about 230 ms per query. Pass
     rerank=False to measure retrieval without it.
+
+    Chunks scoring below `min_score` are then dropped, so a question the
+    corpus cannot answer returns an empty list instead of three unrelated
+    chunks. The threshold reads a cross-encoder score, so it only applies
+    when reranking is on; with rerank=False `score` is a fused rank or a
+    similarity, on a scale this number means nothing on. Pass None to
+    measure retrieval without the threshold.
     """
     if mode not in RETRIEVAL_MODES:
         raise ValueError(f"unknown retrieval mode '{mode}' (expected one of {RETRIEVAL_MODES})")
@@ -128,6 +159,11 @@ def retrieve(
             [dense_hits, keyword_hits], [dense_weight, bm25_weight]
         )[:candidate_k]
 
-    if rerank:
-        return rerank_candidates(query, candidates, k)
-    return candidates[:k]
+    if not rerank:
+        return candidates[:k]
+
+    hits = rerank_candidates(query, candidates, k)
+    if min_score is None:
+        return hits
+    # Skorlar azalan sırada; eşiğin altı kuyruktan kesiliyor
+    return [hit for hit in hits if hit["score"] >= min_score]

@@ -29,8 +29,9 @@ paper and getting a grounded Turkish answer:
   (Server-Sent Events)
 - **Source attribution** — every answer lists which chunks of which documents
   it was grounded in, together with their relevance scores
-- **Hallucination guard** — if the answer is not in your documents, the model
-  says so explicitly instead of making things up
+- **Hallucination guard** — chunks the reranker scores as irrelevant are
+  dropped before the model sees them, so a question your documents cannot
+  answer gets a plain "not found" rather than an invented answer
 - **Smart chunking** — sentence-boundary-aware splitting plus automatic
   references-section filtering for academic PDFs
 - **Hybrid retrieval with reranking** — embedding search and BM25 keyword
@@ -47,6 +48,7 @@ paper and getting a grounded Turkish answer:
 Question ─┬→ embedding search (sqlite-vec)  ─┐
           └→ BM25 keyword search (FTS5)     ─┴→ weighted RRF → top 10
          → cross-encoder reranking → top-k chunks
+         → relevance threshold (drops chunks scoring below -2.5)
          → chunks + question to the local LLM (Foundry Local, Qwen3-4B)
          → answer streamed to the browser over SSE, sources shown with scores
 ```

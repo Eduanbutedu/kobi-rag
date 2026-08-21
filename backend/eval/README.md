@@ -196,6 +196,10 @@ Hit@1 went 0.475 → 0.729 and MRR@10 0.628 → 0.816, at roughly seven times th
 latency. Reranking is much the largest single gain; hybrid search on its own
 mostly moved results already in the top ten into better positions.
 
+These numbers are retrieval alone. What ships also applies a relevance
+threshold on top, which trades Hit@10 0.983 → 0.966 for silence on questions
+the corpus cannot answer; see [The relevance threshold](#the-relevance-threshold).
+
 Split by question type, the gains hold in both, and reranking helps most on
 questions phrased the way a user would phrase them:
 
@@ -229,6 +233,48 @@ anything hybrid ranked 11th or worse is unreachable. `man031` is the only
 question in that position, and it accounts for the entire Hit@10 drop from
 1.000 to 0.983. Buying it back costs about 276 ms per query, which is why the
 shortlist stayed at 10.
+
+## The relevance threshold
+
+Retrieval always returns `k` chunks. Nothing in the ranking says whether the
+best of them is any good, so "merhaba" came back with three pieces of tax law
+and the model dutifully tried to answer from them. The cross-encoder score is
+the first number in the pipeline that means something on its own — it is the
+model's own judgement of how well a chunk answers *this* question — so it is
+what the threshold reads. Chunks below `RELEVANCE_THRESHOLD` are dropped, and
+a question nothing clears returns an empty list, which the API turns into
+"Bu soruya dokümanlarınızda cevap bulamadım." without calling the LLM at all.
+
+Calibration compared the scores of the golden set's relevant chunks against
+the best chunk 13 non-questions pull back (greetings, small talk, off-topic
+requests). **The two distributions overlap**: the weakest real question scores
+−7.233 and the strongest non-question −1.057. No cut separates them cleanly,
+so this is a trade, not a threshold to be discovered.
+
+| cut | Hit@1 | Hit@3 | Hit@10 | Recall@10 | MRR@10 | non-questions silenced | questions left unanswered |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| none | 0.729 | 0.864 | **0.983** | **0.939** | **0.816** | 0/13 | 1/59 |
+| **−2.5** | **0.729** | **0.864** | 0.966 | 0.915 | 0.814 | 9/13 | 2/59 |
+| −1.0 | 0.695 | 0.814 | 0.881 | 0.809 | 0.766 | **13/13** | 7/59 |
+
+`man031` is unanswered in every row: hybrid ranks its chunk 11th, so the
+reranker never sees it (see above). The threshold is not what loses it.
+
+**−2.5 was chosen.** Hit@1 and Hit@3 — the range actually served, since the
+API asks for `k=3` — are untouched, and three quarters of the non-questions
+go quiet. It costs one question, `man016`, whose single relevant chunk scores
+−7.233; three others lose a secondary relevant chunk but keep a good one,
+which is the whole of the Recall@10 drop.
+
+−1.0 silences the remaining four greetings, and that is all it does well. It
+also drops Hit@1 by two questions and Hit@3 by three, and leaves six more
+questions with no answer at all. Cleaning up a handful of greetings is not
+worth emptying real answers, so the softer cut won.
+
+The threshold reads a cross-encoder score, so it only applies when reranking
+is on; with `rerank=False` the score is a fused rank or a cosine similarity,
+scales on which −2.5 means nothing. Pass `min_score=None` to `retrieve()` to
+measure retrieval without it — which is how the table above was produced.
 
 ## Choosing the keyword weight
 

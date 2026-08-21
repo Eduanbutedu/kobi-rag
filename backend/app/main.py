@@ -38,6 +38,17 @@ class AskRequest(BaseModel):
 
 
 NO_DOCUMENTS = "Henüz yüklenmiş doküman yok."
+NO_ANSWER = "Bu soruya dokümanlarınızda cevap bulamadım."
+
+
+def _empty_answer() -> str:
+    """Name which kind of nothing this is: an empty library, or no match.
+
+    retrieve() now returns nothing when no chunk clears the relevance
+    threshold, which reads identically to having uploaded nothing. The two
+    need different advice, so the library is checked before answering.
+    """
+    return NO_ANSWER if get_store().list_documents() else NO_DOCUMENTS
 
 
 def _resolve_session(session_id: int | None) -> int:
@@ -48,6 +59,17 @@ def _resolve_session(session_id: int | None) -> int:
     if not chat.session_exists(session_id):
         raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
     return session_id
+
+
+def _discard_if_new(session_id: int, was_given: bool) -> None:
+    """Drop a session this request opened but never managed to fill.
+
+    Without this a dead model leaves an empty "Yeni sohbet" row in the
+    sidebar for every attempt, since the session is opened before the
+    answer is generated.
+    """
+    if not was_given:
+        get_chat().delete_session(session_id)
 
 
 def _record_exchange(session_id: int, question: str, answer: str, sources: list[dict]) -> bool:
@@ -113,9 +135,10 @@ def ask(request: AskRequest, background: BackgroundTasks) -> dict:
     session_id = _resolve_session(request.session_id)
     chunks = retrieve(get_store(), request.question, k=request.k)
     try:
-        answer = generate_answer(request.question, chunks) if chunks else NO_DOCUMENTS
+        answer = generate_answer(request.question, chunks) if chunks else _empty_answer()
     except LLMUnavailableError as exc:
         # Yarım kalan bir turu geçmişe yazmak yerine hatayı açıkça bildir
+        _discard_if_new(session_id, request.session_id is not None)
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     if _record_exchange(session_id, request.question, answer, chunks):
@@ -141,7 +164,8 @@ def ask_stream(request: AskRequest, background: BackgroundTasks) -> StreamingRes
         yield f"event: sources\ndata: {json.dumps(chunks, ensure_ascii=False)}\n\n"
 
         if not chunks:
-            answer = NO_DOCUMENTS
+            # Modele hiç parça verilmiyor: uyduracak bir bağlamı olmasın
+            answer = _empty_answer()
             yield f"event: delta\ndata: {json.dumps(answer, ensure_ascii=False)}\n\n"
         else:
             pieces = []
@@ -157,7 +181,9 @@ def ask_stream(request: AskRequest, background: BackgroundTasks) -> StreamingRes
             answer = "".join(pieces)
 
         # Yarım kalan cevap saklanmaz; sadece tamamlanan turlar geçmişe girer
-        if failure is None and _record_exchange(session_id, request.question, answer, chunks):
+        if failure is not None:
+            _discard_if_new(session_id, request.session_id is not None)
+        elif _record_exchange(session_id, request.question, answer, chunks):
             background.add_task(_name_session, session_id, request.question)
         yield "event: done\ndata: {}\n\n"
 
