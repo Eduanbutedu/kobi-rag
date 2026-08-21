@@ -159,3 +159,49 @@ def test_the_probe_never_raises(monkeypatch):
 
     assert result["ready"] is False
     assert result["detail"] == llm.LLM_UNAVAILABLE_MESSAGE
+
+
+# --- Sistem promptu ---------------------------------------------------------
+#
+# Prompt'un metnini test etmek tuhaf görünebilir, ama bu kurallar ölçülerek
+# yazıldı ve biri sessizce düşerse model yine sayı uydurmaya başlıyor.
+# Testler kuralın varlığını korur; davranışın kendisi rag/llm.py'daki notta.
+
+
+NO_ANSWER_SENTENCE = "Bu bilgi yüklü dokümanlarda bulunmuyor."
+
+
+def test_the_prompt_offers_a_way_out_when_the_answer_is_missing():
+    assert NO_ANSWER_SENTENCE in llm.SYSTEM_PROMPT
+
+
+def test_the_prompt_ties_numbers_to_the_chunks():
+    # "200 saat" uydurmasının önüne geçen kural
+    assert "SAYILAR:" in llm.SYSTEM_PROMPT
+    assert "başka sayıların bulunması" in llm.SYSTEM_PROMPT
+
+
+def test_the_prompt_covers_a_partly_answerable_question():
+    assert "EKSİK BİLGİ:" in llm.SYSTEM_PROMPT
+
+
+def test_the_prompt_ties_a_citation_to_having_seen_the_chunk():
+    assert "KAYNAK GÖSTERME:" in llm.SYSTEM_PROMPT
+    assert "gerçekten gördüğün parça" in llm.SYSTEM_PROMPT
+
+
+def test_the_prompt_keeps_the_answer_in_the_language_of_the_question():
+    assert "CEVAP DİLİ:" in llm.SYSTEM_PROMPT
+
+
+def test_the_examples_are_fenced_off_from_the_real_question():
+    # Küçük model örnekleri cevabına kopyalıyordu; sınır açıkça çizili olmalı
+    assert "yalnızca cevabın biçimini gösterir" in llm.SYSTEM_PROMPT
+    assert "Örnekler bitti" in llm.SYSTEM_PROMPT
+
+
+def test_one_example_answers_and_one_declines():
+    _, examples = llm.SYSTEM_PROMPT.split("### Örnek 1", 1)
+    found, missing = examples.split("### Örnek 2", 1)
+    assert "[1]." in found and NO_ANSWER_SENTENCE not in found
+    assert NO_ANSWER_SENTENCE in missing
