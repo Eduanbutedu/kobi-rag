@@ -14,10 +14,11 @@ grounded strictly in your document content. No data ever leaves your machine.
 
 Built for Turkish SMEs (KOBİ), works in any language your documents are in.
 
-> **Screenshots pending.** `docs/screenshot.png` and `docs/demo.gif` still show
-> the v1 interface and no longer match the current design. They will be
-> recaptured; until then the interface is described under
-> [Interface](#interface).
+![KOBİ RAG interface](docs/screenshot.png)
+
+**Live demo** — asking a KVKK question and getting a cited answer:
+
+![Streaming answer demo](docs/demo.gif)
 
 ## Features
 
@@ -224,8 +225,6 @@ session is opened and returned.
 - **CI is not set up.** There is no GitHub Actions workflow yet; `pytest`,
   `ruff`, `vitest` and `eslint` are run locally. A workflow running all four on
   push, plus a build-status badge, is planned
-- **Screenshots are outdated** — `docs/screenshot.png` and `docs/demo.gif` show
-  the v1 interface and need recapturing against the current design
 - **Linux support.** The project has moved to Fedora for development, but
   `foundry-local-sdk` is Windows-only, so running the LLM still requires
   Windows. Swapping the LLM layer for Ollama would lift that; this has not been
